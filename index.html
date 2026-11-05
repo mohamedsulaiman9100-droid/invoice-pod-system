@@ -180,6 +180,31 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
 .drv .led{width:12px;height:12px;border-radius:50%;background:#9ca3af;flex:none}
 .drv.on .led{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.2)}
 .drv .nm{font-weight:600;color:var(--ink)}.drv .st{font-size:13px;color:var(--muted)}.drv.on .st{color:var(--ok,#15803d);font-weight:600}
+/* ---- daily assignments ---- */
+.trip{list-style:none;display:grid;gap:8px;padding:0;margin:8px 0 0}
+.trip li{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface-2,var(--surface))}
+.trip .so{font-weight:700}.trip .cu{font-size:13px;color:var(--muted)}.trip .inv{font-size:13px;font-weight:600}
+.trip .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tripCount{font-weight:500;color:var(--muted);font-size:14px}
+.tchip{display:inline-block;font:600 12px/1 system-ui,sans-serif;padding:4px 8px;border-radius:99px;margin-left:6px;background:var(--open-bg);color:var(--open)}
+.tchip.delivered{background:var(--closed-bg);color:var(--closed)}
+.tchip.handed_over{background:#dbeafe;color:#1e40af}
+.tchip.returned{background:var(--danger-bg);color:var(--danger)}
+.tsheet{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.tsheet[hidden]{display:none}
+.tbox{background:var(--bg);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px;display:grid;gap:12px;color:var(--ink)}
+.tbox input,.tbox select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:16px}
+.tbox .trow{display:flex;gap:8px;justify-content:flex-end}
+.tripTotal{font-weight:600;margin:6px 2px}
+.tdrv{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:8px;overflow:hidden}
+.tdrv>button{all:unset;display:block;width:100%;box-sizing:border-box;padding:12px 14px;cursor:pointer}
+.tdrv .nm{font-weight:700}.tdrv .sm{font-size:13px;color:var(--muted);margin-top:2px}
+.tdrv .rows{border-top:1px solid var(--line);padding:6px 14px 10px}
+.tdrv .r{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.tdrv .r:last-child{border-bottom:0}
+.tdrv .r small{color:var(--muted);display:block}
+#tripPreview{margin-bottom:10px;display:grid;gap:8px}
+.bad{color:var(--danger)}
 </style>
 </head>
 <body class="booting">
@@ -187,7 +212,7 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
   <div><h1>Invoice &amp; POD Manager</h1><div class="sub" id="whoLine">Invoices and delivery PODs</div></div>
   <div class="hdr-actions"><button class="btn primary" id="btnNew" type="button">+ New invoice</button><button class="btn" id="btnSignOut" type="button" hidden>Sign out</button></div>
 </div></header>
-<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">My invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">Driver PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button></div></div></nav>
+<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">My invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">Driver PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="trips" aria-selected="false">Trips<span class="dot" id="cnt-trips" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button></div></div></nav>
 
 <main class="wrap">
  <div id="viewInvoices">
@@ -236,6 +261,19 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
   <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
   <ul class="list" id="drvList" aria-live="polite"></ul>
  </div>
+ <div id="viewTrips" hidden>
+  <div id="tripMsg" class="banner" hidden></div>
+  <div class="toolbar">
+    <input type="date" id="tripDate" aria-label="Date">
+    <span class="grow"></span>
+    <button class="btn" id="btnTripRefresh" type="button">Refresh</button>
+    <button class="btn primary" id="btnTripUpload" type="button">⬆ Upload Excel</button>
+    <input type="file" id="tripFile" accept=".xlsx,.xlsm" hidden>
+  </div>
+  <div id="tripPreview" class="card" hidden></div>
+  <div id="tripTotal" class="tripTotal"></div>
+  <ul class="list" id="tripAdmin" aria-live="polite"></ul>
+ </div>
 </main>
 <footer class="note">Invoice format: INV + 7 digits (e.g. INV1234567). My invoices stay on this phone. Driver PODs are kept safely on the server.</footer>
 
@@ -276,12 +314,24 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
   <div class="vpages" id="vPages"></div>
 </div>
 
+<div id="tripSheet" class="tsheet" hidden role="dialog" aria-modal="true">
+  <div class="tbox">
+    <h3 id="tsTitle"></h3>
+    <div id="tsBody"></div>
+    <div class="trow"><button class="btn" id="tsCancel" type="button">Cancel</button><button class="btn primary" id="tsOk" type="button">Save</button></div>
+  </div>
+</div>
 <!-- Editor -->
 <div class="overlay" id="editor" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="edTitle">
     <header><h2><span id="edTitle">New invoice</span><span class="chip open" id="edChip" hidden>Open</span></h2><button class="iconbtn" id="edClose" data-act="ed-cancel" aria-label="Close editor" type="button">✕</button><button class="btn sm" id="drvOut" data-act="drv-out" type="button" hidden>Sign out</button></header>
     <div class="body">
       <div class="banner" id="outbox" hidden></div>
+      <section class="card" id="cardTrip" hidden>
+        <h3>Today's deliveries <span class="tripCount" id="tripCount"></span></h3>
+        <ul class="trip" id="tripList"></ul>
+      </section>
+
       <section class="card" id="cardNo">
         <h3><label for="noInput">Invoice number</label></h3>
         <div class="hint" id="noHint">Type just the 7 digits (e.g. 0076830) — “INV” is added automatically. Or attach the invoice below and it is read for you.</div>
@@ -1452,6 +1502,7 @@ async function demoApi(path, opts) {
   const u = new URL(path, 'http://x'), p = u.pathname, m = opts.method || 'GET', admin = session.role === 'admin';
   const rows = async () => (await Demo.all()).filter(x => x.k.startsWith('row:')).map(x => x.v);
   if (p === '/rest/v1/rpc/touch_seen') return json(200, null);
+  if (p.startsWith('/rest/v1/assignments')) return json(200, []);
   if (p === '/rest/v1/profiles' && u.searchParams.get('role')) return json(200, [{display_name: 'demo driver', last_seen: new Date().toISOString()}]);
   if (p === '/rest/v1/profiles') return json(200, [{role: session.role, display_name: session.name}]);
   if (p === '/rest/v1/pod_uploads') {
@@ -1652,7 +1703,7 @@ async function syncOutbox() {
     for (const it of items) {
       try {
         await sendItem(it); await Outbox.del(it.id);
-        LS.set(dayKey(), String(sentToday() + 1)); outboxState.pending--; renderOutbox(); toast(it.inv + ' uploaded ✓');
+        LS.set(dayKey(), String(sentToday() + 1)); outboxState.pending--; renderOutbox(); toast(it.inv + ' uploaded ✓'); setTimeout(loadTrip, 400);
       } catch (e) {
         outboxState.msg = e instanceof NetError ? 'No internet. It uploads by itself when you are back online.' : (e.message || 'Upload failed.');
         break;
@@ -1820,11 +1871,12 @@ $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer' || e.
 
 let view = 'invoices';
 function setView(v) {
-  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#btnNew').hidden = v !== 'invoices';
+  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewTrips').hidden = v !== 'trips'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (v === 'inbox') loadInbox();
   if (v === 'drivers') loadDrivers();
+  if (v === 'trips') loadTrips();
 }
 /* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
 const ONLINE_MS = 90000;
@@ -1866,7 +1918,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || !session) return;
   if (App.role === 'admin' && view === 'inbox') loadInbox();
   if (App.role === 'admin' && view === 'drivers') loadDrivers();
-  if (App.role === 'driver') { syncOutbox(); pingSeen(); }
+  if (App.role === 'admin' && view === 'trips') loadTrips();
+  if (App.role === 'driver') { syncOutbox(); pingSeen(); loadTrip(); }
 });
 
 function startApp() {
@@ -1879,10 +1932,11 @@ function startApp() {
     setInterval(() => { if (!document.hidden) syncOutbox(); }, 30000);
     addEventListener('online', () => { syncOutbox(); pingSeen(); });
     pingSeen(); setInterval(pingSeen, 30000);
+    loadTrip(); setInterval(() => { if (!document.hidden) loadTrip(); }, 60000);
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
-    setView(['inbox', 'drivers'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
+    setView(['inbox', 'drivers', 'trips'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
     loadInbox(); if (!session.demo) loadDrivers();
     setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
     addEventListener('online', () => { if (view === 'inbox') loadInbox(); });
@@ -1890,6 +1944,217 @@ function startApp() {
   verifyRole();
 }
 
+/* =====================================================================
+   Daily assignments: Excel (SO number + invoice number per driver) -> driver's list -> status
+   ===================================================================== */
+const TRIP_LABEL = {assigned: 'To deliver', delivered: 'Delivered', handed_over: 'Handed over', returned: 'Returned'};
+const dateKey = d => { d = d || new Date(); const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
+const colNum = ref => { let n = 0; for (const ch of ref.replace(/[^A-Z]/gi, '').toUpperCase()) n = n * 26 + ch.charCodeAt(0) - 64; return n; };
+
+/* ---- read the Excel sheet: blocks side by side, each with DRIVER NAME / SO NUMBER / (INVOICE) / CUSTOMER ---- */
+async function readXlsxGrid(buf) {
+  const zip = await JSZip.loadAsync(buf), dom = t => new DOMParser().parseFromString(t, 'application/xml');
+  const sstFile = zip.file('xl/sharedStrings.xml'), sst = [];
+  if (sstFile) dom(await sstFile.async('string')).querySelectorAll('si').forEach(si => sst.push([...si.querySelectorAll('t')].map(t => t.textContent).join('')));
+  const names = Object.keys(zip.files).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort((a, b) => parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]));
+  if (!names.length) throw new Error('This is not an Excel (.xlsx) file.');
+  const grid = new Map();                                   // "r,c" -> text
+  dom(await zip.file(names[0]).async('string')).querySelectorAll('c').forEach(c => {
+    const ref = c.getAttribute('r'); if (!ref) return;
+    const r = parseInt(ref.replace(/\D/g, ''), 10), col = colNum(ref), t = c.getAttribute('t'), v = c.querySelector('v');
+    let s = '';
+    if (t === 's') s = v ? (sst[parseInt(v.textContent, 10)] || '') : '';
+    else if (t === 'inlineStr') s = [...c.querySelectorAll('t')].map(x => x.textContent).join('');
+    else if (v) s = v.textContent;
+    s = String(s).replace(/\s+/g, ' ').trim();
+    if (s) grid.set(r + ',' + col, s);
+  });
+  return grid;
+}
+function parseAssignGrid(grid) {
+  const cells = [...grid.entries()].map(([k, v]) => { const [r, c] = k.split(',').map(Number); return {r, c, v}; });
+  const heads = cells.filter(x => /^driver\s*name$/i.test(x.v)).map(x => ({r: x.r, c0: x.c}));
+  if (!heads.length) throw new Error('Could not find "DRIVER NAME" in the sheet.');
+  const maxC = Math.max(...cells.map(x => x.c)) + 1;
+  heads.forEach(h => {
+    const same = heads.filter(o => o.r === h.r && o.c0 > h.c0).map(o => o.c0).sort((a, b) => a - b);
+    h.c1 = same.length ? same[0] - 1 : maxC;
+    const lower = heads.filter(o => o.c0 === h.c0 && o.r > h.r).map(o => o.r).sort((a, b) => a - b);
+    h.r1 = lower.length ? lower[0] - 1 : Infinity;
+    const nm = cells.filter(x => x.r === h.r && x.c > h.c0 && x.c <= h.c1).sort((a, b) => a.c - b.c)[0];
+    const m = nm && nm.v.match(/^\s*(?:MR|MS|MRS)?\.?\s*:?\s*([A-Za-z][A-Za-z .'-]*?)\s*(?:\(|$)/i);
+    h.driver = m ? m[1].trim() : (nm ? nm.v : '');
+    const veh = cells.filter(x => x.r === h.r - 1 && x.c >= h.c0 && x.c <= h.c1).sort((a, b) => a.c - b.c)[0];
+    h.vehicle = veh ? veh.v : '';
+  });
+  const rows = [], seen = new Set();
+  for (const h of heads) {
+    const inBlock = cells.filter(x => x.r > h.r && x.r <= h.r1 && x.c >= h.c0 && x.c <= h.c1);
+    const byRow = new Map(); inBlock.forEach(x => { (byRow.get(x.r) || byRow.set(x.r, []).get(x.r)).push(x); });
+    for (const [r, list] of [...byRow.entries()].sort((a, b) => a[0] - b[0])) {
+      const so = list.find(x => /^SO[-\s]?\d{4,}$/i.test(x.v)); if (!so) continue;
+      const soNo = 'SO-' + so.v.replace(/\D/g, '');
+      const inv = list.find(x => x !== so && /^(INV)?\s*-?\s*\d{7}$/i.test(x.v));
+      const cust = list.filter(x => x !== so && x !== inv).sort((a, b) => b.v.length - a.v.length)[0];
+      const key = soNo; if (seen.has(key)) continue; seen.add(key);
+      rows.push({driver: h.driver, vehicle: h.vehicle, so: soNo, inv: inv ? 'INV' + inv.v.replace(/\D/g, '') : '', customer: cust ? cust.v : ''});
+    }
+  }
+  if (!rows.length) throw new Error('No SO numbers found under the driver names.');
+  return rows;
+}
+
+/* ---- driver: today's list ---- */
+const Trip = {rows: [], loaded: false, sheet: null};
+async function loadTrip() {
+  if (!session || App.role !== 'driver' || session.demo) return;
+  const from = dateKey(new Date(Date.now() - 7 * 86400000));
+  try {
+    const res = await api('/rest/v1/assignments?select=id,work_date,so_no,customer,inv_no,status,handed_to,note,hub_received_at&driver_id=eq.' + session.uid + '&work_date=gte.' + from + '&order=work_date.desc,so_no.asc');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    Trip.rows = await res.json(); Trip.loaded = true; LS.set('pod.trip.' + session.uid, JSON.stringify(Trip.rows));
+  } catch (e) { if (!Trip.loaded) { try { Trip.rows = JSON.parse(LS.get('pod.trip.' + session.uid) || '[]'); } catch (x) { Trip.rows = []; } } }
+  renderTrip();
+}
+function tripVisible() { const today = dateKey(); return Trip.rows.filter(r => r.work_date === today || r.status === 'assigned'); }
+function renderTrip() {
+  const card = $('#cardTrip'); if (!card) return;
+  const vis = tripVisible(); card.hidden = !vis.length;
+  const done = vis.filter(r => r.status !== 'assigned').length;
+  $('#tripCount').textContent = vis.length ? `${done} of ${vis.length} done` : '';
+  $('#tripList').innerHTML = vis.map(r => {
+    const acts = r.status === 'assigned'
+      ? `<button class="btn sm primary" data-tact="upload" data-id="${r.id}" type="button">📷 Upload POD</button><button class="btn sm" data-tact="hand" data-id="${r.id}" type="button">Handed over</button><button class="btn sm" data-tact="ret" data-id="${r.id}" type="button">Returned</button>`
+      : (r.status !== 'delivered' && !r.hub_received_at ? `<button class="btn sm" data-tact="undo" data-id="${r.id}" type="button">Undo</button>` : '');
+    const extra = r.status === 'handed_over' ? `<div class="cu">Handed to: ${esc(r.handed_to || '')}</div>`
+      : r.status === 'returned' ? `<div class="cu">Returned: ${esc(r.note || '')}${r.hub_received_at ? ' · ✓ hub received' : ''}</div>` : '';
+    return `<li><div><span class="so">${esc(r.so_no)}</span><span class="tchip ${r.status}">${TRIP_LABEL[r.status]}</span></div>`
+      + `<div class="cu">${esc(r.customer || '')}</div>${r.inv_no ? `<div class="inv">${esc(r.inv_no)}</div>` : ''}${extra}<div class="acts">${acts}</div></li>`;
+  }).join('');
+}
+function openTripSheet(kind, row) {
+  Trip.sheet = {kind, row};
+  $('#tsTitle').textContent = kind === 'hand' ? `Handed over: ${row.so_no}` : `Returned to hub: ${row.so_no}`;
+  $('#tsBody').innerHTML = kind === 'hand'
+    ? '<input id="tsText" placeholder="Merchandiser / salesman name" autocomplete="off">'
+    : '<select id="tsReason"><option>Customer closed</option><option>Customer refused</option><option>Wrong / damaged item</option><option>Could not reach customer</option><option>Other</option></select><input id="tsText" placeholder="Note (optional)" autocomplete="off">';
+  $('#tripSheet').hidden = false; setTimeout(() => $('#tsText').focus(), 50);
+}
+async function setAssignment(id, status, text) {
+  const res = await api('/rest/v1/rpc/set_assignment', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({p_id: id, p_status: status, p_text: text || ''})});
+  if (!res.ok) throw new Error(res.status === 0 ? 'offline' : 'Server refused (' + res.status + ')');
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-tact]'); if (!b) return;
+  const row = Trip.rows.find(r => r.id === b.dataset.id); if (!row) return;
+  const act = b.dataset.tact;
+  if (act === 'upload') {
+    if (row.inv_no && typeof applyNumber === 'function') applyNumber(row.inv_no.slice(PREFIX.length));
+    else toast('Take the photo, then type the invoice number');
+    const c = $('#cardPod'); if (c && c.scrollIntoView) c.scrollIntoView({behavior: 'smooth', block: 'start'});
+  } else if (act === 'hand' || act === 'ret') openTripSheet(act, row);
+  else if (act === 'undo') {
+    try { await setAssignment(row.id, 'assigned', ''); await loadTrip(); } catch (x) { toast(x instanceof NetError ? 'Needs internet' : x.message, true); }
+  }
+});
+document.addEventListener('click', async e => {
+  if (e.target.id === 'tsCancel') { $('#tripSheet').hidden = true; return; }
+  if (e.target.id !== 'tsOk' || !Trip.sheet) return;
+  const {kind, row} = Trip.sheet, t = ($('#tsText').value || '').trim();
+  let status, text;
+  if (kind === 'hand') { if (!t) { toast('Enter the name of who took it', true); return; } status = 'handed_over'; text = t; }
+  else { status = 'returned'; text = $('#tsReason').value + (t ? ' - ' + t : ''); }
+  try { await setAssignment(row.id, status, text); $('#tripSheet').hidden = true; toast('Saved ✓'); await loadTrip(); }
+  catch (x) { toast(x instanceof NetError ? 'Needs internet. Try again.' : x.message, true); }
+});
+
+/* ---- admin: Trips tab ---- */
+const Trips = {rows: [], drivers: [], open: new Set(), parsed: null, err: ''};
+async function loadTripDrivers() {
+  try {
+    const res = await api('/rest/v1/profiles?select=id,display_name&role=eq.driver&order=display_name');
+    if (res.ok) Trips.drivers = await res.json();
+  } catch (e) {}
+}
+async function loadTrips() {
+  if (!session || session.demo) { $('#tripMsg').hidden = false; $('#tripMsg').textContent = 'Daily trips need the real server (not the demo).'; return; }
+  const day = $('#tripDate').value || dateKey();
+  try {
+    if (!Trips.drivers.length) await loadTripDrivers();
+    const res = await api('/rest/v1/assignments?select=*&work_date=eq.' + day + '&order=driver_name.asc,so_no.asc');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    Trips.rows = await res.json(); $('#tripMsg').hidden = true;
+  } catch (e) { $('#tripMsg').hidden = false; $('#tripMsg').textContent = 'Could not load trips. Was the "assignments" SQL step run in Supabase?'; }
+  renderTrips();
+}
+function renderTrips() {
+  const by = new Map(); Trips.rows.forEach(r => { (by.get(r.driver_name) || by.set(r.driver_name, []).get(r.driver_name)).push(r); });
+  const cnt = (l, s) => l.filter(r => r.status === s).length;
+  const all = Trips.rows, pend = cnt(all, 'assigned'), toHub = all.filter(r => r.status === 'returned' && !r.hub_received_at).length;
+  $('#tripTotal').textContent = all.length ? `${all.length} assigned · ${cnt(all, 'delivered')} delivered · ${cnt(all, 'handed_over')} handed over · ${cnt(all, 'returned')} returned · ${pend} pending` : 'No assignments for this date. Upload the Excel.';
+  const dot = $('#cnt-trips'); if (dot) { const n = (($('#tripDate').value || dateKey()) === dateKey()) ? pend : 0; dot.hidden = !n; dot.textContent = n; }
+  $('#tripAdmin').innerHTML = [...by.entries()].map(([name, l]) => {
+    const p = cnt(l, 'assigned'), op = Trips.open.has(name);
+    const rows = op ? `<div class="rows">${l.map(r => `<div class="r"><div><b>${esc(r.so_no)}</b>${r.inv_no ? ' · ' + esc(r.inv_no) : ''}<small>${esc(r.customer || '')}${r.status === 'handed_over' ? ' · to ' + esc(r.handed_to || '') : ''}${r.status === 'returned' ? ' · ' + esc(r.note || '') : ''}</small></div>`
+      + `<div>${r.status === 'returned' ? (r.hub_received_at ? '<span class="tchip delivered">✓ At hub</span>' : `<button class="btn sm primary" data-hub="${r.id}" type="button">Received at hub</button>`) : `<span class="tchip ${r.status}">${TRIP_LABEL[r.status]}</span>`}</div></div>`).join('')}</div>` : '';
+    const ret = l.filter(r => r.status === 'returned'), got = ret.filter(r => r.hub_received_at).length;
+    return `<li class="tdrv"><button data-tdrv="${esc(name)}" type="button"><div class="nm">${esc(name)} <span class="tchip ${p ? '' : 'delivered'}">${p ? p + ' pending' : 'all done'}</span></div>`
+      + `<div class="sm">${l.length} assigned · ${cnt(l, 'delivered')} delivered · ${cnt(l, 'handed_over')} handed over · ${ret.length} returned${ret.length ? ` (${got} at hub)` : ''}</div></button>${rows}</li>`;
+  }).join('');
+}
+function renderTripPreview() {
+  const box = $('#tripPreview'), P = Trips.parsed;
+  if (!P) { box.hidden = true; return; }
+  const names = new Map(); P.rows.forEach(r => names.set(r.driver, (names.get(r.driver) || 0) + 1));
+  const match = n => Trips.drivers.find(d => (d.display_name || '').toLowerCase() === n.toLowerCase());
+  const lines = [...names.entries()].map(([n, c]) => match(n) ? `<div>✓ <b>${esc(n)}</b>: ${c} SO</div>` : `<div class="bad">✗ <b>${esc(n)}</b>: ${c} SO, no driver login with this name. They will be skipped.</div>`).join('');
+  const noInv = P.rows.filter(r => !r.inv).length;
+  box.hidden = false;
+  box.innerHTML = `<strong>${esc(P.name)}: ${P.rows.length} deliveries for ${esc($('#tripDate').value)}</strong>${lines}`
+    + (noInv ? `<div class="bad">${noInv} rows have no invoice number. The driver will type it when uploading.</div>` : '')
+    + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button">Assign to drivers</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
+}
+async function tripFileChosen(file) {
+  try {
+    if (!Trips.drivers.length) await loadTripDrivers();
+    const rows = parseAssignGrid(await readXlsxGrid(await file.arrayBuffer()));
+    Trips.parsed = {rows, name: file.name}; $('#tripMsg').hidden = true; renderTripPreview();
+  } catch (e) { Trips.parsed = null; renderTripPreview(); $('#tripMsg').hidden = false; $('#tripMsg').textContent = e.message || 'Could not read this file.'; }
+}
+async function tripAssign() {
+  const P = Trips.parsed, day = $('#tripDate').value || dateKey(); if (!P) return;
+  const out = [], skipped = new Set();
+  P.rows.forEach(r => {
+    const d = Trips.drivers.find(x => (x.display_name || '').toLowerCase() === r.driver.toLowerCase());
+    if (!d) { skipped.add(r.driver); return; }
+    out.push({work_date: day, driver_id: d.id, driver_name: d.display_name, vehicle: r.vehicle || null, so_no: r.so, customer: r.customer || null, inv_no: r.inv || null});
+  });
+  if (!out.length) { toast('No matching drivers', true); return; }
+  try {
+    const res = await api('/rest/v1/assignments?on_conflict=work_date,so_no', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(out)});
+    if (!res.ok) throw new Error('Server refused (' + res.status + ')');
+    Trips.parsed = null; renderTripPreview(); toast(out.length + ' deliveries assigned ✓' + (skipped.size ? ' (skipped: ' + [...skipped].join(', ') + ')' : ''));
+    await loadTrips();
+  } catch (e) { toast(e instanceof NetError ? 'No internet' : e.message, true); }
+}
+document.addEventListener('click', async e => {
+  const t = e.target;
+  if (t.id === 'btnTripUpload') $('#tripFile').click();
+  else if (t.id === 'btnTripRefresh') loadTrips();
+  else if (t.id === 'tripGo') tripAssign();
+  else if (t.id === 'tripNo') { Trips.parsed = null; renderTripPreview(); }
+  else if (t.closest('[data-tdrv]')) { const n = t.closest('[data-tdrv]').dataset.tdrv; Trips.open.has(n) ? Trips.open.delete(n) : Trips.open.add(n); renderTrips(); }
+  else if (t.dataset && t.dataset.hub) {
+    try {
+      const res = await api('/rest/v1/assignments?id=eq.' + t.dataset.hub, {method: 'PATCH', headers: {'Content-Type': 'application/json', Prefer: 'return=minimal'}, body: JSON.stringify({hub_received_at: new Date().toISOString()})});
+      if (!res.ok) throw new Error('Server refused (' + res.status + ')');
+      await loadTrips();
+    } catch (x) { toast(x.message, true); }
+  }
+});
+$('#tripDate').value = dateKey();
+$('#tripDate').addEventListener('change', loadTrips);
+$('#tripFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) tripFileChosen(f); });
 /* =====================================================================
    Boot
    ===================================================================== */
