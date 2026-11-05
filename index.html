@@ -357,6 +357,13 @@ ul#ordList{list-style:none;margin:0;padding:0 0 90px}
 .steps .ic.g{background:var(--closed-bg);color:var(--closed)}.steps .ic.a{background:var(--open-bg);color:var(--open)}.steps .ic.r{background:var(--danger-bg);color:var(--danger)}
 .steps b{display:block;font-size:14.5px}.steps small{color:var(--muted)}
 .tbox.tall{max-height:88vh;overflow:auto}
+
+.topList{display:grid;gap:8px;margin-top:8px}
+.top{display:grid;grid-template-columns:30px minmax(70px,auto) 1fr 34px;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.top.first{background:var(--open-bg);box-shadow:inset 0 0 0 1.5px var(--brass)}.top.me{outline:2px solid var(--accent)}
+.top .rk{font-size:20px;text-align:center;font-weight:700}.top .bar{height:8px;border-radius:9px;background:var(--line);overflow:hidden}
+.top .bar i{display:block;height:100%;background:var(--brass);border-radius:9px}.top em{font-style:normal;font-weight:700;text-align:right}
+.top b small{display:block;font-weight:500;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body class="booting">
@@ -411,6 +418,7 @@ ul#ordList{list-style:none;margin:0;padding:0 0 90px}
  <div id="viewDrivers" hidden>
   <div id="drvMsg" class="banner" hidden></div>
   <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
+  <section class="card" style="margin-bottom:12px"><h3>🏆 Top drivers this week</h3><div class="hint">Orders completed with POD, since Monday</div><div class="topList"></div></section>
   <ul class="list" id="drvList" aria-live="polite"></ul>
  </div>
  <div id="viewOrders" hidden>
@@ -500,6 +508,12 @@ ul#ordList{list-style:none;margin:0;padding:0 0 90px}
         <h3>Today's deliveries <span class="tripCount" id="tripCount"></span></h3>
         <div id="tripBar"></div>
         <div class="trip" id="tripList"></div>
+      </section>
+
+      <section class="card" id="cardTop" hidden>
+        <h3>🏆 Top drivers this week</h3>
+        <div class="hint">Orders completed with POD, since Monday</div>
+        <div class="topList"></div>
       </section>
 
       <section class="card" id="cardNo">
@@ -607,7 +621,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
    Helpers
    ===================================================================== */
 const $ = (s, r = document) => r.querySelector(s);
-const PREFIX = 'INV', NUM_LEN = 7;
+let PREFIX = 'INV'; const NUM_LEN = 7;
 const TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
 let autoRead = (() => { try { return localStorage.getItem('pod_autoread') === '1'; } catch (e) { return false; } })();
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -621,7 +635,7 @@ const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0');
 // Accepts "0076830", "INV0076830", "inv-0076830" … returns at most 7 digits.
 function cleanNumberInput(raw) {
   raw = String(raw || '');
-  const m = raw.match(/INV\s*[-:#_.\/]?\s*(\d{7})/i);
+  const m = raw.match(/(?:INV|SO)\s*[-:#_.\/]?\s*(\d{7})/i);
   if (m) return m[1];
   return raw.replace(/\D/g, '').slice(0, NUM_LEN);
 }
@@ -1678,7 +1692,7 @@ async function demoApi(path, opts) {
   if (p === '/rest/v1/pod_uploads') {
     if (m === 'POST') {
       const b = JSON.parse(opts.body);
-      if (!/^INV\d{7}$/.test(b.inv_no)) return json(400, {message: 'bad number'});
+      if (!/^(INV|SO-)\d{7}$/.test(b.inv_no)) return json(400, {message: 'bad number'});
       if (await Demo.get('row:' + b.id)) return json(409, {});
       await Demo.put('row:' + b.id, {...b, driver_id: session.uid, driver_name: session.name, created_at: new Date().toISOString(), downloaded_at: null});
       return empty(201);
@@ -1794,6 +1808,10 @@ $('#cfgBack').addEventListener('click', () => { CFG = readCfg(); showAuth(cfgRea
 function applyEditorMode() {
   const dm = App.role === 'driver';
   if (!applyEditorMode.noHint) applyEditorMode.noHint = $('#noHint').textContent;
+  PREFIX = dm ? 'SO-' : 'INV';
+  document.querySelector('#noField .pfx').textContent = dm ? 'SO-' : 'INV';
+  document.querySelector('label[for="noInput"]').textContent = dm ? 'SO number' : 'Invoice number';
+  if (dm) { autoRead = false; const sw = $('#autoSw'); sw.checked = false; sw.closest('.autorow').hidden = true; }
   $('#cardInvoice').hidden = dm;
   $('#edClose').hidden = dm; $('#drvOut').hidden = !dm;
   $('#btnPdf').hidden = dm; $('#btnUpload').hidden = !dm;
@@ -1802,7 +1820,7 @@ function applyEditorMode() {
   else $('#btnSave').hidden = false;
   $('#podTitle').textContent = dm ? '1. Photo of the signed POD' : 'LPO / POD photo / PDF';
   $('#podHint').textContent = dm ? 'One photo for each page. The page is straightened and shadows are removed for you.' : 'Add as many pages as you need.';
-  $('#noHint').textContent = dm ? 'Read from the photo automatically. Check it, or type the 7 digits.' : applyEditorMode.noHint;
+  $('#noHint').textContent = dm ? 'Type the 7 digits of the SO number, e.g. 0097760. It is saved as SO-0097760.' : applyEditorMode.noHint;
   document.querySelectorAll('#cardPod [data-act="up"]').forEach(b => { b.textContent = dm ? '🖼 Gallery' : '📁 Upload photo / PDF'; });
   if (autoRead && navigator.onLine !== false) getOcrWorker().catch(() => {});     // warm up the reader while the person takes the photo
 }
@@ -1873,7 +1891,7 @@ async function syncOutbox() {
     for (const it of items) {
       try {
         await sendItem(it); await Outbox.del(it.id);
-        LS.set(dayKey(), String(sentToday() + 1)); outboxState.pending--; renderOutbox(); toast(it.inv + ' uploaded ✓'); setTimeout(loadTrip, 400);
+        LS.set(dayKey(), String(sentToday() + 1)); outboxState.pending--; renderOutbox(); toast(it.inv + ' uploaded ✓'); setTimeout(() => { loadTrip(); loadTop(); }, 400);
       } catch (e) {
         outboxState.msg = e instanceof NetError ? 'No internet. It uploads by itself when you are back online.' : (e.message || 'Upload failed.');
         break;
@@ -1891,8 +1909,8 @@ async function shrinkForUpload(blob) {
 async function driverUpload() {
   const d = state.draft; if (!d) return;
   if (!isValidDigits(d.no)) {
-    $('#noField').classList.add('bad'); $('#noHelp').className = 'help bad'; $('#noHelp').textContent = `Invoice number must be ${PREFIX} + exactly ${NUM_LEN} digits.`;
-    toast(`Enter exactly ${NUM_LEN} digits for the invoice number`, true); $('#noInput').focus(); return;
+    $('#noField').classList.add('bad'); $('#noHelp').className = 'help bad'; $('#noHelp').textContent = `${App.role === 'driver' ? 'SO number' : 'Invoice number'} must be ${PREFIX} + exactly ${NUM_LEN} digits.`;
+    toast(`Enter exactly ${NUM_LEN} digits for the ${App.role === 'driver' ? 'SO' : 'invoice'} number`, true); $('#noInput').focus(); return;
   }
   const pages = d.docs.filter(x => x.type === 'image' && !x.busy);
   if (!pages.length) { toast('Take at least one photo first', true); return; }
@@ -2045,7 +2063,7 @@ function setView(v) {
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (v === 'inbox') loadInbox();
-  if (v === 'drivers') loadDrivers();
+  if (v === 'drivers') { loadDrivers(); loadTop(); }
   if (v === 'orders') loadOrders();
 }
 /* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
@@ -2102,12 +2120,12 @@ function startApp() {
     setInterval(() => { if (!document.hidden) syncOutbox(); }, 30000);
     addEventListener('online', () => { syncOutbox(); pingSeen(); });
     pingSeen(); setInterval(pingSeen, 30000);
-    loadTrip(); setInterval(() => { if (!document.hidden) loadTrip(); }, 60000);
+    loadTrip(); loadTop(); setInterval(() => { if (!document.hidden) { loadTrip(); loadTop(); } }, 60000);
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
     setView(['inbox', 'drivers', 'orders'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
-    loadInbox(); if (!session.demo) loadDrivers();
+    loadInbox(); if (!session.demo) { loadDrivers(); loadTop(); }
     setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
     addEventListener('online', () => { if (view === 'inbox') loadInbox(); });
   }
@@ -2218,7 +2236,7 @@ function tripCard(r) {
   else if (r.status === 'pod_pending') acts = `<button class="btn main brassbtn" data-tact="upload" data-id="${r.id}" type="button">📷 Upload POD now</button><button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`;
   else if (r.status === 'handed_over') { extra = `<div class="m">Handed to: ${esc(r.handed_to || '')}</div>`; if (!r.hub_received_at) acts = `<button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`; }
   else if (r.status === 'returned') { extra = `<div class="m">Returned: ${esc(r.note || '')}${r.hub_received_at ? ' · received at hub' : ''}</div>`; if (!r.hub_received_at) acts = `<button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`; }
-  return `<div class="cc" style="--rail:${rail}">${chip}<div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}${r.inv_no ? ' · ' + esc(r.inv_no) : ''}</div>${extra}${acts}</div>`;
+  return `<div class="cc" style="--rail:${rail}">${chip}<div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div>${extra}${acts}</div>`;
 }
 function renderTrip() {
   const card = $('#cardTrip'); if (!card) return;
@@ -2238,8 +2256,8 @@ function openTripSheet(kind, row) {
   $('#tripSheet').hidden = false; if (kind === 'hand') setTimeout(() => $('#tsText').focus(), 50);
 }
 async function afterDeliveredPrompt(row) {
-  if (row.inv_no && typeof applyNumber === 'function') applyNumber(row.inv_no.slice(PREFIX.length));
-  else toast('Take the photo, then type the invoice number');
+  if (row.so_no && typeof applyNumber === 'function') applyNumber(row.so_no.replace(/\D/g, '').slice(-NUM_LEN));
+  else toast('Take the photo, then type the SO number');
   const c = $('#cardPod'); if (c && c.scrollIntoView) c.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 document.addEventListener('click', async e => {
@@ -2289,7 +2307,7 @@ async function loadOrders() {
 }
 function ordShown() {
   const q = Ord.q.trim().toLowerCase();
-  return Ord.rows.filter(r => bucketOf(r) === Ord.f && (!Ord.drv || r.driver_name === Ord.drv) && (!q || [r.customer, r.so_no, r.inv_no].some(x => (x || '').toLowerCase().includes(q))));
+  return Ord.rows.filter(r => bucketOf(r) === Ord.f && (!Ord.drv || r.driver_name === Ord.drv) && (!q || [r.customer, r.so_no].some(x => (x || '').toLowerCase().includes(q))));
 }
 function renderOrders() {
   const cnt = k => Ord.rows.filter(r => bucketOf(r) === k && (!Ord.drv || r.driver_name === Ord.drv)).length;
@@ -2302,7 +2320,7 @@ function renderOrders() {
     const selectable = ['unassigned', 'assigned'].includes(r.status);
     const sub = r.status === 'unassigned' && r.flag === 'not_picked' ? `Not picked by ${esc(r.prev_driver || 'driver')}: ${esc(r.note || '')}` : r.driver_name ? 'Driver: ' + esc(r.driver_name) : '';
     return `<li class="ord" data-id="${r.id}">${selectable ? `<button class="rb ${Ord.sel.has(r.id) ? 'on' : ''}" data-osel="${r.id}" type="button" aria-label="Select"></button>` : '<span></span>'}`
-      + `<div><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}${r.inv_no ? ' · ' + esc(r.inv_no) : ''}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>${kchip(r)}</li>`;
+      + `<div><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>${kchip(r)}</li>`;
   }).join('') : `<li class="empty">${Ord.rows.length ? 'No orders in this group.' : 'No orders for this date. Tap Upload Excel.'}</li>`;
   const n = Ord.sel.size; $('#ordBar').hidden = !n; $('#ordSel').textContent = n + ' selected';
   const allAssigned = n && [...Ord.sel].every(id => (Ord.rows.find(r => r.id === id) || {}).status === 'assigned'); $('#ordUnasg').hidden = !allAssigned;
@@ -2312,7 +2330,7 @@ async function openOrderDetail(id) {
   $('#ordSheet').hidden = false;
   const facts = [r.driver_name && 'Driver: <b>' + esc(r.driver_name) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>'].filter(Boolean).join(' · ');
   const act = r.status === 'returned' && !r.hub_received_at ? `<button class="btn primary main" data-hubrec="${r.id}" type="button">Received at hub</button>` : '';
-  $('#ordDetail').innerHTML = `<div class="dtitle"><div><div class="m">${esc(r.so_no)}${r.inv_no ? ' · ' + esc(r.inv_no) : ''}</div><h3>${esc(r.customer || r.so_no)}</h3></div>${kchip(r)}</div>${facts ? `<div class="m" style="margin:8px 0">${facts}</div>` : ''}${act}<h4 style="margin:16px 0 10px">History</h4><div class="steps" id="ordHist"><div class="m">Loading…</div></div>`;
+  $('#ordDetail').innerHTML = `<div class="dtitle"><div><div class="m">${esc(r.so_no)}</div><h3>${esc(r.customer || r.so_no)}</h3></div>${kchip(r)}</div>${facts ? `<div class="m" style="margin:8px 0">${facts}</div>` : ''}${act}<h4 style="margin:16px 0 10px">History</h4><div class="steps" id="ordHist"><div class="m">Loading…</div></div>`;
   try {
     const res = await api('/rest/v1/order_events?select=at,actor,kind,info&assignment_id=eq.' + id + '&order=at.asc'); if (!res.ok) throw 0;
     const ev = await res.json();
@@ -2332,10 +2350,8 @@ function renderTripPreview() {
   const names = new Map(); P.rows.forEach(r => names.set(r.driver, (names.get(r.driver) || 0) + 1));
   const match = n => Ord.drivers.find(d => (d.display_name || '').toLowerCase() === n.toLowerCase());
   const lines = [...names.entries()].map(([n, c]) => match(n) ? `<div>✓ <b>${esc(n)}</b>: ${c} orders will be Assigned</div>` : `<div class="warn">• <b>${esc(n)}</b>: ${c} orders, no driver login with this name. They will be Unassigned.</div>`).join('');
-  const noInv = P.rows.filter(r => !r.inv).length;
   box.hidden = false;
   box.innerHTML = `<strong>${esc(P.name)}: ${P.rows.length} orders for ${esc($('#tripDate').value)}</strong>${lines}`
-    + (noInv ? `<div class="warn">${noInv} order${noInv > 1 ? 's have' : ' has'} no invoice number. The driver will type it when uploading.</div>` : '')
     + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button">Add orders</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
 }
 async function tripFileChosen(file) {
@@ -2349,7 +2365,7 @@ async function tripAssign() {
   const P = Ord.parsed, day = $('#tripDate').value || dateKey(); if (!P) return;
   const out = P.rows.map(r => {
     const d = Ord.drivers.find(x => (x.display_name || '').toLowerCase() === r.driver.toLowerCase());
-    return {work_date: day, driver_id: d ? d.id : null, driver_name: d ? d.display_name : null, vehicle: r.vehicle || null, so_no: r.so, customer: r.customer || null, inv_no: r.inv || null, status: d ? 'assigned' : 'unassigned'};
+    return {work_date: day, driver_id: d ? d.id : null, driver_name: d ? d.display_name : null, vehicle: r.vehicle || null, so_no: r.so, customer: r.customer || null, inv_no: null, status: d ? 'assigned' : 'unassigned'};
   });
   try {
     const before = Ord.rows.length;
@@ -2384,6 +2400,30 @@ $('#tripDate').addEventListener('change', loadOrders);
 $('#ordQ').addEventListener('input', e => { Ord.q = e.target.value; renderOrders(); });
 $('#ordDrv').addEventListener('change', e => { Ord.drv = e.target.value; renderOrders(); });
 $('#tripFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) tripFileChosen(f); });
+
+/* =============== weekly top drivers =============== */
+async function loadTop() {
+  if (!session || session.demo) return;
+  try {
+    const res = await api('/rest/v1/rpc/weekly_top', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+    if (!res.ok) throw 0; renderTop(await res.json());
+  } catch (e) { renderTop(null); }
+}
+function renderTop(list) {
+  const adm = App.role === 'admin', medal = i => ['🥇', '🥈', '🥉'][i] || i + 1;
+  const row = (x, i) => { const max = Math.max(1, list[0].done); return `<div class="top ${i === 0 && x.done ? 'first' : ''} ${session && x.driver_name === session.name ? 'me' : ''}"><span class="rk">${medal(i)}</span><b>${esc(x.driver_name)}${adm ? `<small>${x.done} of ${x.total} · ${Math.round(x.done / x.total * 100)}%</small>` : ''}</b><span class="bar"><i style="width:${Math.round(x.done / max * 100)}%"></i></span><em>${x.done}</em></div>`; };
+  let html;
+  if (!list) html = '<div class="m">Could not load. Needs internet.</div>';
+  else if (!list.length) html = '<div class="m">No orders this week yet.</div>';
+  else if (adm) html = list.map(row).join('');
+  else {
+    const me = list.findIndex(x => x.driver_name === session.name);
+    html = list.slice(0, 3).map(row).join('') + (me >= 3 ? `<div class="m" style="text-align:center">…</div>` + row(list[me], me) : '');
+    if (me < 0) html += '<div class="m">You have no orders this week yet.</div>';
+  }
+  document.querySelectorAll('.topList').forEach(el => { el.innerHTML = html; });
+  const c = $('#cardTop'); if (c) c.hidden = false;
+}
 /* =====================================================================
    Boot
    ===================================================================== */
