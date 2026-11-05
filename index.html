@@ -168,6 +168,12 @@ body.driver #outbox{order:0}
 body.driver #cardPod{order:1}
 body.driver #cardNo{order:2}
 body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
+.autorow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted);cursor:pointer}
+.autorow input{appearance:none;-webkit-appearance:none;width:48px;height:28px;border-radius:99px;background:var(--muted);position:relative;flex:none;cursor:pointer;border:0;transition:background .15s;opacity:.7}
+.autorow input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
+.autorow input:checked{background:var(--accent);opacity:1}
+.autorow input:checked::after{transform:translateX(20px)}
+.autorow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 </style>
 </head>
 <body class="booting">
@@ -271,6 +277,7 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
         <div class="help" id="noHelp"></div>
         <div class="ocr" id="ocrStatus" aria-live="polite"></div>
         <div class="chips" id="ocrChips"></div>
+        <label class="autorow" for="autoSw"><span>Read the number from the photo automatically</span><input type="checkbox" id="autoSw"></label>
       </section>
       <section class="card" id="cardInvoice">
         <h3>Invoice photo / PDF</h3>
@@ -370,6 +377,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 const $ = (s, r = document) => r.querySelector(s);
 const PREFIX = 'INV', NUM_LEN = 7;
 const TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+let autoRead = (() => { try { return localStorage.getItem('pod_autoread') === '1'; } catch (e) { return false; } })();
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
 const isValidDigits = s => new RegExp('^\\d{' + NUM_LEN + '}$').test(s || '');
@@ -908,45 +916,47 @@ async function readInvoiceNumber(doc, onStatus) {
   onStatus('Loading OCR engine…');
   const worker = await getOcrWorker();
   ocrProgress = m => { if (m && m.status === 'recognizing text') onStatus('Reading invoice number… ' + Math.round((m.progress || 0) * 100) + '%'); };
-  const run = async (canvas, psm, minW = 1600) => {
+  const runRaw = async (canvas, psm, minW = 1600) => {
     try { await worker.setParameters({tessedit_pageseg_mode: String(psm)}); } catch (e) {}
     const blob = await toJpeg(ocrPrep(canvas, minW), 0.92);
     const res = await (ocrQueue = ocrQueue.catch(() => {}).then(() => worker.recognize(blob)));
-    const text = res && res.data ? res.data.text : '';
+    return res && res.data ? res.data.text : '';
+  };
+  const run = async (canvas, psm, minW) => {
+    const text = await runRaw(canvas, psm, minW);
     collected += '\n' + text; merge(extractInvoiceNumbers(text));
     return text;
   };
-  // Words every delivery note / invoice page has. Only the right way up are they read as real words.
-  const wordHits = t => (String(t).match(/\b(INVOICE|TAX|BILL|SHIP|TOTAL|DATE|QTY|AMOUNT|VAT|DESCRIPTION|BATCH|PRICE|DELIVERY|RECEIVED|CUSTOMER|SIGNATURE)\b/gi) || []).length;
+  // Words that every invoice / delivery note has. Read the right way up they come out as real words;
+  // sideways or upside down they come out as rubbish. (The number alone cannot tell us: the OCR engine
+  // can read a sideways page by itself, so a found number says nothing about which way the photo is.)
+  const wordHits = t => (String(t).match(/\b(INVOICE|TAX|BILL|SHIP|TOTAL|DATE|QTY|AMOUNT|VAT|DESCRIPTION|BATCH|PRICE|DELIVERY|RECEIVED|CUSTOMER|SIGNATURE|ITEM|UNIT|QUANTITY|DISCOUNT|ADDRESS|DUBAI|UAE|LLC|ORDER|NUMBER|NAME|CODE|SIGN|STAMP)\b/gi) || []).length;
   const strip = (c, f) => {
     const h = Math.max(50, Math.round(c.height * f)), o = document.createElement('canvas'); o.width = c.width; o.height = h;
     o.getContext('2d').drawImage(c, 0, 0, c.width, h, 0, 0, c.width, h); return o;
   };
-  // Which way up is the page? Sideways photos are tried turned first. The "INV" number tells us the
-  // right way up, and the caller then turns the saved photo the same way.
-  const axis = doc.type === 'pdf' ? 'h' : textAxis(base).axis;
   const turn = (c, deg) => { let o = c; for (let i = 0; i < deg / 90; i++) o = rotateCanvasCW(o); return o; };
-  const order = axis === 'v' ? [90, 270, 0, 180] : [0, 180, 90, 270], primary = axis === 'v' ? 2 : 1;
-  let rotation = 0; const hits = {0: 0, 90: 0, 180: 0, 270: 0};
-  for (let k = 0; k < order.length; k++) {
-    const deg = order[k], c = turn(base, deg);
-    onStatus(k === 0 ? 'Reading invoice number…' : 'Trying the page turned…');
-    hits[deg] = wordHits(await run(c, 3));
-    if (!strong() && k < primary) { onStatus('Checking the top of the page…'); hits[deg] = Math.max(hits[deg], wordHits(await run(strip(c, 0.45), 6))); }
-    if (!strong() && k === 0 && deg === 0) { onStatus('Trying another way…'); await run(c, 11); }
-    if (strong()) { rotation = deg; break; }
-  }
-  if (!rotation && !strong()) {            // no INV number anywhere: turn by which way the page reads as real words
-    const best = [90, 180, 270].reduce((a, d) => hits[d] > hits[a] ? d : a, 90);
-    if (hits[best] >= 3 && hits[best] >= hits[0] + 3) {
-      rotation = best;
-      const up = turn(base, rotation);          // now that it is upright, read the number from the top part
-      onStatus('Reading invoice number…');
-      await run(strip(up, 0.45), 6);
-      if (!strong()) await run(up, 11);
-      if (!strong()) await run(strip(up, 0.3), 6, 2800);       // top part only, enlarged
+  // 1) Read the top part of the page. The same pass tells us which way up the page is (real words or rubbish)
+  //    and, when it is upright, already holds the invoice number. Sideways photos are tried turned first.
+  let turnBy = 0, upText = '';
+  if (doc.type !== 'pdf') {
+    const probes = textAxis(base).axis === 'v' ? [90, 270, 0, 180] : [0, 180, 90, 270];
+    let best = {deg: 0, hits: 0};
+    onStatus('Reading invoice number…');
+    for (const deg of probes) {
+      const text = await run(strip(turn(base, deg), 0.45), 6), h = wordHits(text);
+      if (h > best.hits) best = {deg, hits: h};
+      if (h >= 4) break;
+      onStatus('Trying the page turned…');
     }
+    if (best.hits >= 3) turnBy = best.deg;
   }
+  const up = turnBy ? turn(base, turnBy) : base;
+  // 2) number not found yet: read the whole page and other parts of the upright page
+  if (!strong()) { onStatus('Reading invoice number…'); await run(up, 3); }
+  if (!strong()) { onStatus('Checking the top of the page…'); await run(strip(up, 0.3), 6, 2800); }
+  if (!strong()) { onStatus('Trying another way…'); await run(up, 11); }
+  const rotation = turnBy % 360;
   try { await worker.setParameters({tessedit_pageseg_mode: '3'}); } catch (e) {}
   return {candidates: ranked(), text: collected, rotation};
 }
@@ -1142,7 +1152,7 @@ async function addFiles(kind, files) {
         try { doc = await buildImageDoc(f, kind); } finally { busy(false); }
       } else { toast(`${f.name}: only photos and PDFs are supported`, true); continue; }
       d.docs.push(doc); d.dirty = true; renderDocs();
-      if ((kind === 'invoice' || App.role === 'driver') && !isValidDigits(d.no)) scanDoc(doc);
+      if (autoRead && (kind === 'invoice' || App.role === 'driver') && !isValidDigits(d.no)) scanDoc(doc);
     } catch (e) {
       toast(`Could not read “${f.name}”. Try a JPG/PNG photo or a PDF.`, true);
     }
@@ -1157,9 +1167,6 @@ async function scanDoc(doc, manual) {
     const {candidates, rotation} = await readInvoiceNumberRetry(doc, m => { if (state.draft === d) { d.ocr.msg = m; renderOcr(); } });
     if (state.draft !== d) return;
     let turned = false;
-    if (rotation && doc.type !== 'pdf' && d.docs.includes(doc)) {
-      try { await turnDocUpright(doc, rotation); turned = true; } catch (e) {}
-    }
     const best = candidates.find(c => c.rank <= 2) || (candidates.length === 1 ? candidates[0] : null);
     d.ocr.cands = candidates.map(c => c.digits).slice(0, 5);
     const canFill = !isValidDigits(d.no) || (manual && d.noSource !== 'manual');
@@ -1263,7 +1270,7 @@ async function recropDoc(doc) {
     state.draft.dirty = true;
   } catch (e) { toast('Crop failed', true); }
   finally { doc.busy = false; busy(false); renderDocs(); }
-  if ((doc.kind === 'invoice' || App.role === 'driver') && !isValidDigits(state.draft.no)) scanDoc(doc);
+  if (autoRead && (doc.kind === 'invoice' || App.role === 'driver') && !isValidDigits(state.draft.no)) scanDoc(doc);
 }
 async function turnDocUpright(doc, deg) {
   doc.busy = true; renderDocs();
@@ -1559,7 +1566,7 @@ function applyEditorMode() {
   $('#podHint').textContent = dm ? 'One photo for each page. The page is straightened and shadows are removed for you.' : 'Add as many pages as you need.';
   $('#noHint').textContent = dm ? 'Read from the photo automatically. Check it, or type the 7 digits.' : applyEditorMode.noHint;
   document.querySelectorAll('#cardPod [data-act="up"]').forEach(b => { b.textContent = dm ? '🖼 Gallery' : '📁 Upload photo / PDF'; });
-  if (navigator.onLine !== false) getOcrWorker().catch(() => {});     // warm up the reader while the person takes the photo
+  if (autoRead && navigator.onLine !== false) getOcrWorker().catch(() => {});     // warm up the reader while the person takes the photo
 }
 
 /* ---- driver: outbox (photos wait here until the server has them) ---- */
@@ -1835,6 +1842,10 @@ function startApp() {
   const ok = await DB.open();
   $('#storageWarn').hidden = ok;
   try { state.records = await DB.all(); } catch (e) { state.records = []; toast('Could not load saved invoices', true); }
+  { const sw = $('#autoSw'); sw.checked = autoRead; sw.addEventListener('change', () => {
+      autoRead = sw.checked; try { localStorage.setItem('pod_autoread', autoRead ? '1' : '0'); } catch (e) {}
+      if (autoRead && state.draft && !isValidDigits(state.draft.no)) { const doc = state.draft.docs.find(x => x.kind === 'invoice' || App.role === 'driver'); if (doc) scanDoc(doc); }
+    }); }
   renderList();
   loadSession();
   if (!session) { document.body.classList.remove('booting'); showAuth('login'); }
