@@ -1532,7 +1532,7 @@ async function signIn(user, pass) {
   session = s; saveSession();
 }
 async function signOut() {
-  const s = session; session = null; saveSession();
+  const s = session; session = null; saveSession(); sayOffline(s);
   try { if (s && !s.demo) fetch(CFG.url + '/auth/v1/logout', {method: 'POST', headers: {apikey: CFG.key, Authorization: 'Bearer ' + s.access}, keepalive: true}).catch(() => {}); } catch (e) {}
   location.reload();
 }
@@ -1827,11 +1827,15 @@ function setView(v) {
   if (v === 'drivers') loadDrivers();
 }
 /* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
-const ONLINE_MS = 150000;
+const ONLINE_MS = 90000;
 function pingSeen() {
   if (!session || session.demo || document.hidden) return;
   api('/rest/v1/rpc/touch_seen', {method: 'POST', body: '{}', headers: {'Content-Type': 'application/json'}}).catch(() => {});
 }
+function sayOffline(s) {     // driver signs out or closes the app: tell the server right away
+  try { if (s && !s.demo && s.role === 'driver') fetch(CFG.url + '/rest/v1/rpc/go_offline', {method: 'POST', headers: {apikey: CFG.key, Authorization: 'Bearer ' + s.access, 'Content-Type': 'application/json'}, body: '{}', keepalive: true}).catch(() => {}); } catch (e) {}
+}
+addEventListener('pagehide', () => sayOffline(session));
 function agoText(t) {
   if (!t) return 'Never opened the app';
   const s = Math.max(0, (Date.now() - new Date(t).getTime()) / 1000);
@@ -1874,7 +1878,7 @@ function startApp() {
     Outbox.open().then(() => syncOutbox());
     setInterval(() => { if (!document.hidden) syncOutbox(); }, 30000);
     addEventListener('online', () => { syncOutbox(); pingSeen(); });
-    pingSeen(); setInterval(pingSeen, 60000);
+    pingSeen(); setInterval(pingSeen, 30000);
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
