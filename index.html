@@ -306,6 +306,57 @@ input[type=date]{min-height:44px;padding:8px 12px;border-radius:10px;border:1px 
 .authbox{margin:max(24px,6vh) auto 24px}
 .overlay.auth{background:linear-gradient(180deg,var(--bar) 0 300px,var(--bg) 300px)}
 .warn{color:var(--open)}
+
+/* ---- Orders ---- */
+.ohero{background:var(--bar);color:#fff;border-radius:18px;padding:16px 14px 14px;margin-bottom:12px}
+.ohero .oh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ohero h2{margin:0;font-size:22px;letter-spacing:-.02em}.ohero p{margin:2px 0 0;color:rgba(255,255,255,.65);font-size:13px}
+.ohero .btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.25);color:#fff;min-height:38px}
+.pipe{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0 0}
+@media(min-width:640px){.pipe{grid-template-columns:repeat(6,1fr)}}
+.pipe button{appearance:none;text-align:left;cursor:pointer;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:9px 8px 8px;color:inherit}
+.pipe button.on{background:#fff;border-color:#fff}.pipe button.on b{color:var(--bar)}.pipe button.on span{color:#53606f}
+.pipe b{display:block;font-size:22px;line-height:1;font-weight:700;color:#fff;letter-spacing:-.02em}
+.pipe span{display:block;font-size:10.5px;margin-top:5px;color:rgba(255,255,255,.62);font-weight:600;line-height:1.15}
+.pipe i{display:block;height:3px;border-radius:9px;margin-top:7px}
+.otools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.otools input,.otools select{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:42px}
+.otools #ordQ{flex:1;min-width:150px}
+ul#ordList{list-style:none;margin:0;padding:0 0 90px}
+.ord{display:grid;grid-template-columns:26px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:8px;cursor:pointer}
+.ord .t{font-weight:700;font-size:15.5px;letter-spacing:-.01em;line-height:1.25}.ord .m,.cc .m{font-size:12.5px;color:var(--muted);margin-top:3px}
+.rb{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);background:none;padding:0;cursor:pointer}
+.rb.on{border-color:var(--accent);background:radial-gradient(var(--accent) 48%,transparent 52%)}
+.k{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12px;line-height:1;padding:6px 9px;border-radius:99px;white-space:nowrap;align-self:flex-start}
+.k::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.k.un{background:var(--surface-2);color:var(--muted)}.k.as{background:var(--open-bg);color:var(--open)}.k.out,.k.hm{background:var(--blue-bg);color:var(--blue)}.k.dl{background:var(--closed-bg);color:var(--closed)}.k.rt,.k.np{background:var(--danger-bg);color:var(--danger)}
+.k.pp{background:var(--open-bg);color:var(--open);box-shadow:inset 0 0 0 1.5px var(--brass)}
+.ordbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;gap:8px;align-items:center;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.12)}
+.ordbar b{flex:1}.ordbar .btn{min-height:46px}
+.btn.brassbtn,.ordbar .brass{background:var(--brass);border-color:var(--brass);color:var(--brass-ink)}
+.cc{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.cc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--rail,var(--blue))}
+.cc .t{font-size:18px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:10px 0 4px}
+.btn.main{width:100%;min-height:54px;font-size:17px;font-weight:700;margin-top:14px;border-radius:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.two .btn{min-height:46px;font-size:14px}
+.cc .linkbtn{display:block;margin:10px auto 0;border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer}
+.rs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.rs button{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer}
+.rs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#tsText{width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:16px;min-height:46px}
+.asglist .dr,#asgList .dr{display:flex;align-items:center;gap:12px;width:100%;padding:14px;margin-bottom:8px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;text-align:left}
+#asgList .dr b{flex:1}#asgList .dr small{color:var(--muted)}
+#asgList .dr .r{width:20px;height:20px;border-radius:50%;border:2px solid var(--line)}
+#asgList .dr.on{border-color:var(--accent);background:var(--accent-soft)}#asgList .dr.on .r{border-color:var(--accent);background:radial-gradient(var(--accent) 48%,transparent 52%)}
+.dtitle{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.dtitle h3{margin:2px 0 0;font-size:19px}
+.cap{width:44px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 10px}
+.steps .w{position:relative;padding-bottom:16px}
+.steps .w::before{content:"";position:absolute;left:14px;top:30px;bottom:2px;width:2px;background:var(--line)}
+.steps .w:last-child::before{display:none}
+.steps .ln{display:grid;grid-template-columns:30px 1fr;gap:12px}
+.steps .ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:10px;background:var(--blue-bg);color:var(--blue)}
+.steps .ic.g{background:var(--closed-bg);color:var(--closed)}.steps .ic.a{background:var(--open-bg);color:var(--open)}.steps .ic.r{background:var(--danger-bg);color:var(--danger)}
+.steps b{display:block;font-size:14.5px}.steps small{color:var(--muted)}
+.tbox.tall{max-height:88vh;overflow:auto}
 </style>
 </head>
 <body class="booting">
@@ -313,7 +364,7 @@ input[type=date]{min-height:44px;padding:8px 12px;border-radius:10px;border:1px 
   <div><h1>Invoice &amp; POD Manager</h1><div class="sub" id="whoLine">Invoices and delivery PODs</div></div>
   <div class="hdr-actions"><button class="btn primary" id="btnNew" type="button">+ New invoice</button><button class="btn" id="btnSignOut" type="button" hidden>Sign out</button></div>
 </div></header>
-<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="trips" aria-selected="false">Trips<span class="dot" id="cnt-trips" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button></div></div></nav>
+<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false">Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button></div></div></nav>
 
 <main class="wrap">
  <div id="viewInvoices">
@@ -362,18 +413,21 @@ input[type=date]{min-height:44px;padding:8px 12px;border-radius:10px;border:1px 
   <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
   <ul class="list" id="drvList" aria-live="polite"></ul>
  </div>
- <div id="viewTrips" hidden>
+ <div id="viewOrders" hidden>
   <div id="tripMsg" class="banner" hidden></div>
-  <div class="toolbar">
-    <input type="date" id="tripDate" aria-label="Date">
-    <span class="grow"></span>
-    <button class="btn" id="btnTripRefresh" type="button">Refresh</button>
-    <button class="btn primary" id="btnTripUpload" type="button">⬆ Upload Excel</button>
-    <input type="file" id="tripFile" accept=".xlsx,.xlsm" hidden>
-  </div>
+  <section class="ohero">
+    <div class="oh"><div><h2>Orders</h2><p id="ordSub"></p></div>
+      <div><button class="btn sm ghostw" id="btnTripUpload" type="button">⬆ Upload Excel</button><input type="file" id="tripFile" accept=".xlsx,.xlsm" hidden></div></div>
+    <div class="pipe" id="ordPipe" role="tablist" aria-label="Order status"></div>
+  </section>
   <div id="tripPreview" class="card" hidden></div>
-  <div id="tripTotal" class="tripTotal"></div>
-  <ul class="list" id="tripAdmin" aria-live="polite"></ul>
+  <div class="otools">
+    <input type="date" id="tripDate" aria-label="Date">
+    <select id="ordDrv" aria-label="Driver"><option value="">All drivers</option></select>
+    <div class="search"><input id="ordQ" type="search" placeholder="Search customer, SO or invoice" aria-label="Search orders"></div>
+  </div>
+  <ul id="ordList" aria-live="polite"></ul>
+  <div class="ordbar" id="ordBar" hidden><b id="ordSel">0 selected</b><span class="grow"></span><button class="btn" id="ordUnasg" type="button" hidden>Unassign</button><button class="btn brass" id="ordAsg" type="button">Assign driver</button></div>
  </div>
 </main>
 <footer class="note">Invoice format: INV + 7 digits (e.g. INV1234567). My invoices stay on this phone. Driver PODs are kept safely on the server.</footer>
@@ -422,6 +476,20 @@ input[type=date]{min-height:44px;padding:8px 12px;border-radius:10px;border:1px 
     <div class="trow"><button class="btn" id="tsCancel" type="button">Cancel</button><button class="btn primary" id="tsOk" type="button">Save</button></div>
   </div>
 </div>
+<div id="asgSheet" class="tsheet" hidden role="dialog" aria-modal="true">
+  <div class="tbox">
+    <h3 id="asgTitle">Assign orders</h3>
+    <div id="asgList" class="asglist"></div>
+    <div class="trow"><button class="btn" id="asgCancel" type="button">Cancel</button><button class="btn primary" id="asgOk" type="button" disabled>Assign</button></div>
+  </div>
+</div>
+<div id="ordSheet" class="tsheet" hidden role="dialog" aria-modal="true">
+  <div class="tbox tall">
+    <div class="cap"></div>
+    <div id="ordDetail"></div>
+    <div class="trow"><button class="btn" id="ordClose" type="button">Close</button></div>
+  </div>
+</div>
 <!-- Editor -->
 <div class="overlay" id="editor" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="edTitle">
@@ -431,7 +499,7 @@ input[type=date]{min-height:44px;padding:8px 12px;border-radius:10px;border:1px 
       <section class="card" id="cardTrip" hidden>
         <h3>Today's deliveries <span class="tripCount" id="tripCount"></span></h3>
         <div id="tripBar"></div>
-        <ul class="trip" id="tripList"></ul>
+        <div class="trip" id="tripList"></div>
       </section>
 
       <section class="card" id="cardNo">
@@ -1973,12 +2041,12 @@ $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer' || e.
 
 let view = 'invoices';
 function setView(v) {
-  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewTrips').hidden = v !== 'trips'; $('#btnNew').hidden = v !== 'invoices';
+  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (v === 'inbox') loadInbox();
   if (v === 'drivers') loadDrivers();
-  if (v === 'trips') loadTrips();
+  if (v === 'orders') loadOrders();
 }
 /* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
 const ONLINE_MS = 90000;
@@ -2020,7 +2088,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || !session) return;
   if (App.role === 'admin' && view === 'inbox') loadInbox();
   if (App.role === 'admin' && view === 'drivers') loadDrivers();
-  if (App.role === 'admin' && view === 'trips') loadTrips();
+  if (App.role === 'admin' && view === 'orders') loadOrders();
   if (App.role === 'driver') { syncOutbox(); pingSeen(); loadTrip(); }
 });
 
@@ -2038,7 +2106,7 @@ function startApp() {
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
-    setView(['inbox', 'drivers', 'trips'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
+    setView(['inbox', 'drivers', 'orders'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
     loadInbox(); if (!session.demo) loadDrivers();
     setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
     addEventListener('online', () => { if (view === 'inbox') loadInbox(); });
@@ -2049,7 +2117,6 @@ function startApp() {
 /* =====================================================================
    Daily assignments: Excel (SO number + invoice number per driver) -> driver's list -> status
    ===================================================================== */
-const TRIP_LABEL = {assigned: 'To deliver', delivered: 'Delivered', handed_over: 'Handed over', returned: 'Returned'};
 const dateKey = d => { d = d || new Date(); const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
 const colNum = ref => { let n = 0; for (const ch of ref.replace(/[^A-Z]/gi, '').toUpperCase()) n = n * 26 + ch.charCodeAt(0) - 64; return n; };
 
@@ -2106,15 +2173,29 @@ function parseAssignGrid(grid) {
   return rows;
 }
 
+
+/* ---- shared labels ---- */
+const ST = {unassigned: {t: 'Unassigned', k: 'un'}, assigned: {t: 'Assigned', k: 'as'}, out: {t: 'Out for delivery', k: 'out'}, pod_pending: {t: 'Delivered · POD pending', k: 'pp'},
+  complete: {t: 'Complete', k: 'dl'}, handed_over: {t: 'Handed over', k: 'hm'}, returned: {t: 'Returned', k: 'rt'}};
+const stOf = r => r.status === 'unassigned' && r.flag === 'not_picked' ? {t: 'Not picked', k: 'np'} : (r.status === 'returned' && r.hub_received_at ? {t: 'Returned · at hub', k: 'rt'} : ST[r.status] || ST.assigned);
+const kchip = r => { const s = stOf(r); return `<span class="k ${s.k}">${s.t}</span>`; };
+const bucketOf = r => r.status === 'returned' ? (r.hub_received_at ? 'closed' : 'returned') : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
+const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
+  not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
+  returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', undo: () => 'Undone'};
+const evTime = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'), hm = p(d.getHours()) + ':' + p(d.getMinutes()); return dateKey(d) === dateKey() ? hm : d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + hm; };
 function stackBar(list) {
-  const n = list.length || 1, c = s => list.filter(r => r.status === s).length;
-  return '<div class="stack" aria-hidden="true">' + ['delivered', 'handed_over', 'returned'].map(s => c(s) ? `<i class="s-${s}" style="width:${c(s) / n * 100}%"></i>` : '').join('') + '</div>';
+  const n = list.length || 1, c = f => list.filter(f).length;
+  const seg = [['s-delivered', c(r => r.status === 'complete')], ['s-handed_over', c(r => r.status === 'handed_over')], ['s-returned', c(r => r.status === 'returned')], ['s-out', c(r => r.status === 'out' || r.status === 'pod_pending')]];
+  return '<div class="stack" aria-hidden="true">' + seg.map(([k, v]) => v ? `<i class="${k}" style="width:${v / n * 100}%"></i>` : '').join('') + '</div>';
 }
-function legendHtml(list) {
-  const c = s => list.filter(r => r.status === s).length;
-  return `<div class="legend"><span class="l-delivered"><b>${c('delivered')}</b> delivered</span><span class="l-handed_over"><b>${c('handed_over')}</b> handed over</span><span class="l-returned"><b>${c('returned')}</b> returned</span><span><b>${c('assigned')}</b> to deliver</span></div>`;
+async function rpc(name, args) {
+  const res = await api('/rest/v1/rpc/' + name, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(args)});
+  if (!res.ok) throw new Error('Server refused (' + res.status + ')');
 }
-/* ---- driver: today's list ---- */
+const netMsg = x => x instanceof NetError ? 'Needs internet. Try again.' : (x.message || 'Failed');
+
+/* =============== driver: today's list =============== */
 const Trip = {rows: [], loaded: false, sheet: null};
 async function loadTrip() {
   if (!session || App.role !== 'driver' || session.demo) return;
@@ -2126,145 +2207,182 @@ async function loadTrip() {
   } catch (e) { if (!Trip.loaded) { try { Trip.rows = JSON.parse(LS.get('pod.trip.' + session.uid) || '[]'); } catch (x) { Trip.rows = []; } } }
   renderTrip();
 }
-function tripVisible() { const today = dateKey(); return Trip.rows.filter(r => r.work_date === today || r.status === 'assigned'); }
+const ORDER = {assigned: 0, out: 1, pod_pending: 2, handed_over: 3, returned: 3, complete: 4};
+function tripVisible() { const today = dateKey(); return Trip.rows.filter(r => r.work_date === today || ['assigned', 'out', 'pod_pending'].includes(r.status)).sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9)); }
+function tripCard(r) {
+  const rail = {assigned: 'var(--brass)', out: 'var(--blue)', pod_pending: 'var(--brass)', complete: 'var(--closed)', handed_over: 'var(--blue)', returned: 'var(--danger)'}[r.status];
+  const chip = r.status === 'assigned' ? '<span class="k as">To pick</span>' : kchip(r);
+  let acts = '', extra = '';
+  if (r.status === 'assigned') acts = `<div class="two"><button class="btn primary" data-tact="pick" data-id="${r.id}" type="button">Picked</button><button class="btn" data-tact="np" data-id="${r.id}" type="button">Not picked</button></div>`;
+  else if (r.status === 'out') acts = `<button class="btn primary main" data-tact="deliv" data-id="${r.id}" type="button">Delivered</button><div class="two"><button class="btn ghost" data-tact="hand" data-id="${r.id}" type="button">Handed to merchandiser</button><button class="btn ghost" data-tact="ret" data-id="${r.id}" type="button">Return to hub</button></div>`;
+  else if (r.status === 'pod_pending') acts = `<button class="btn main brassbtn" data-tact="upload" data-id="${r.id}" type="button">📷 Upload POD now</button><button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`;
+  else if (r.status === 'handed_over') { extra = `<div class="m">Handed to: ${esc(r.handed_to || '')}</div>`; if (!r.hub_received_at) acts = `<button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`; }
+  else if (r.status === 'returned') { extra = `<div class="m">Returned: ${esc(r.note || '')}${r.hub_received_at ? ' · received at hub' : ''}</div>`; if (!r.hub_received_at) acts = `<button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`; }
+  return `<div class="cc" style="--rail:${rail}">${chip}<div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}${r.inv_no ? ' · ' + esc(r.inv_no) : ''}</div>${extra}${acts}</div>`;
+}
 function renderTrip() {
   const card = $('#cardTrip'); if (!card) return;
   const vis = tripVisible(); card.hidden = !vis.length;
-  const done = vis.filter(r => r.status !== 'assigned').length;
+  const done = vis.filter(r => ['complete', 'handed_over', 'returned'].includes(r.status)).length;
   $('#tripCount').textContent = vis.length ? `${done} of ${vis.length} done` : '';
   $('#tripBar').innerHTML = vis.length ? stackBar(vis) : '';
-  $('#tripList').innerHTML = vis.map(r => {
-    const acts = r.status === 'assigned'
-      ? `<button class="btn sm primary" data-tact="upload" data-id="${r.id}" type="button">📷 Upload POD</button><button class="btn sm" data-tact="hand" data-id="${r.id}" type="button">Handed over</button><button class="btn sm" data-tact="ret" data-id="${r.id}" type="button">Returned</button>`
-      : (r.status !== 'delivered' && !r.hub_received_at ? `<button class="btn sm" data-tact="undo" data-id="${r.id}" type="button">Undo</button>` : '');
-    const extra = r.status === 'handed_over' ? `<div class="cu">Handed to: ${esc(r.handed_to || '')}</div>`
-      : r.status === 'returned' ? `<div class="cu">Returned: ${esc(r.note || '')}${r.hub_received_at ? ' · ✓ hub received' : ''}</div>` : '';
-    return `<li class="st-${r.status}"><div><span class="so">${esc(r.so_no)}</span><span class="tchip ${r.status}">${TRIP_LABEL[r.status]}</span></div>`
-      + `<div class="cu">${esc(r.customer || '')}</div>${r.inv_no ? `<div class="inv">${esc(r.inv_no)}</div>` : ''}${extra}<div class="acts">${acts}</div></li>`;
-  }).join('');
+  $('#tripList').innerHTML = vis.map(tripCard).join('');
 }
+const NP_REASONS = ['Not in schedule', 'Area not covered', 'Stock not ready', 'Other'], RET_REASONS = ['Customer closed', 'Customer refused', 'Wrong / damaged item', 'Could not reach customer', 'Other'];
 function openTripSheet(kind, row) {
-  Trip.sheet = {kind, row};
-  $('#tsTitle').textContent = kind === 'hand' ? `Handed over: ${row.so_no}` : `Returned to hub: ${row.so_no}`;
-  $('#tsBody').innerHTML = kind === 'hand'
-    ? '<input id="tsText" placeholder="Merchandiser / salesman name" autocomplete="off">'
-    : '<select id="tsReason"><option>Customer closed</option><option>Customer refused</option><option>Wrong / damaged item</option><option>Could not reach customer</option><option>Other</option></select><input id="tsText" placeholder="Note (optional)" autocomplete="off">';
-  $('#tripSheet').hidden = false; setTimeout(() => $('#tsText').focus(), 50);
+  Trip.sheet = {kind, row, reason: kind === 'np' ? NP_REASONS[0] : RET_REASONS[0]};
+  $('#tsTitle').textContent = kind === 'hand' ? 'Handed to merchandiser' : kind === 'np' ? 'Why not picked?' : 'Return to hub';
+  const reasons = kind === 'np' ? NP_REASONS : RET_REASONS;
+  $('#tsBody').innerHTML = (kind === 'hand' ? '<input id="tsText" placeholder="Merchandiser / salesman name" autocomplete="off">'
+    : `<div class="rs" id="tsReasons">${reasons.map((x, i) => `<button type="button" class="${i ? '' : 'on'}" data-reason="${esc(x)}">${esc(x)}</button>`).join('')}</div><input id="tsText" placeholder="Note (optional)" autocomplete="off">`);
+  $('#tripSheet').hidden = false; if (kind === 'hand') setTimeout(() => $('#tsText').focus(), 50);
 }
-async function setAssignment(id, status, text) {
-  const res = await api('/rest/v1/rpc/set_assignment', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({p_id: id, p_status: status, p_text: text || ''})});
-  if (!res.ok) throw new Error(res.status === 0 ? 'offline' : 'Server refused (' + res.status + ')');
+async function afterDeliveredPrompt(row) {
+  if (row.inv_no && typeof applyNumber === 'function') applyNumber(row.inv_no.slice(PREFIX.length));
+  else toast('Take the photo, then type the invoice number');
+  const c = $('#cardPod'); if (c && c.scrollIntoView) c.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 document.addEventListener('click', async e => {
+  const rb = e.target.closest('[data-reason]');
+  if (rb && Trip.sheet) { Trip.sheet.reason = rb.dataset.reason; document.querySelectorAll('#tsReasons button').forEach(b => b.classList.toggle('on', b === rb)); return; }
   const b = e.target.closest('[data-tact]'); if (!b) return;
   const row = Trip.rows.find(r => r.id === b.dataset.id); if (!row) return;
   const act = b.dataset.tact;
-  if (act === 'upload') {
-    if (row.inv_no && typeof applyNumber === 'function') applyNumber(row.inv_no.slice(PREFIX.length));
-    else toast('Take the photo, then type the invoice number');
-    const c = $('#cardPod'); if (c && c.scrollIntoView) c.scrollIntoView({behavior: 'smooth', block: 'start'});
-  } else if (act === 'hand' || act === 'ret') openTripSheet(act, row);
-  else if (act === 'undo') {
-    try { await setAssignment(row.id, 'assigned', ''); await loadTrip(); } catch (x) { toast(x instanceof NetError ? 'Needs internet' : x.message, true); }
-  }
+  try {
+    if (act === 'upload') await afterDeliveredPrompt(row);
+    else if (act === 'pick') { await rpc('driver_pick', {p_id: row.id, p_ok: true, p_text: ''}); toast('Out for delivery ✓'); await loadTrip(); }
+    else if (act === 'deliv') { await rpc('driver_mark', {p_id: row.id, p_status: 'pod_pending', p_text: ''}); await loadTrip(); toast('Delivered. Now upload the POD'); await afterDeliveredPrompt(row); }
+    else if (act === 'undo') { await rpc('driver_mark', {p_id: row.id, p_status: 'out', p_text: ''}); await loadTrip(); }
+    else openTripSheet(act, row);
+  } catch (x) { toast(netMsg(x), true); }
 });
 document.addEventListener('click', async e => {
   if (e.target.id === 'tsCancel') { $('#tripSheet').hidden = true; return; }
   if (e.target.id !== 'tsOk' || !Trip.sheet) return;
-  const {kind, row} = Trip.sheet, t = ($('#tsText').value || '').trim();
-  let status, text;
-  if (kind === 'hand') { if (!t) { toast('Enter the name of who took it', true); return; } status = 'handed_over'; text = t; }
-  else { status = 'returned'; text = $('#tsReason').value + (t ? ' - ' + t : ''); }
-  try { await setAssignment(row.id, status, text); $('#tripSheet').hidden = true; toast('Saved ✓'); await loadTrip(); }
-  catch (x) { toast(x instanceof NetError ? 'Needs internet. Try again.' : x.message, true); }
+  const {kind, row, reason} = Trip.sheet, t = ($('#tsText').value || '').trim();
+  try {
+    if (kind === 'hand') { if (!t) { toast('Enter the name of who took it', true); return; } await rpc('driver_mark', {p_id: row.id, p_status: 'handed_over', p_text: t}); }
+    else if (kind === 'ret') await rpc('driver_mark', {p_id: row.id, p_status: 'returned', p_text: reason + (t ? ' - ' + t : '')});
+    else await rpc('driver_pick', {p_id: row.id, p_ok: false, p_text: reason + (t ? ' - ' + t : '')});
+    $('#tripSheet').hidden = true; toast('Saved ✓'); await loadTrip();
+  } catch (x) { toast(netMsg(x), true); }
 });
 
-/* ---- admin: Trips tab ---- */
-const Trips = {rows: [], drivers: [], open: new Set(), parsed: null, err: ''};
-async function loadTripDrivers() {
-  try {
-    const res = await api('/rest/v1/profiles?select=id,display_name&role=eq.driver&order=display_name');
-    if (res.ok) Trips.drivers = await res.json();
-  } catch (e) {}
+/* =============== admin: Orders tab =============== */
+const Ord = {rows: [], drivers: [], f: 'unassigned', q: '', drv: '', sel: new Set(), parsed: null, pick: null};
+const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned, not at hub', '#e26b61'], ['closed', 'Closed', '#35c28e']];
+async function loadOrderDrivers() {
+  try { const res = await api('/rest/v1/profiles?select=id,display_name&role=eq.driver&order=display_name'); if (res.ok) Ord.drivers = await res.json(); } catch (e) {}
+  $('#ordDrv').innerHTML = '<option value="">All drivers</option>' + Ord.drivers.map(d => `<option>${esc(d.display_name)}</option>`).join('');
 }
-async function loadTrips() {
-  if (!session || session.demo) { $('#tripMsg').hidden = false; $('#tripMsg').textContent = 'Daily trips need the real server (not the demo).'; return; }
+async function loadOrders() {
+  if (!session || session.demo) { $('#tripMsg').hidden = false; $('#tripMsg').textContent = 'Orders need the real server (not the demo).'; return; }
   const day = $('#tripDate').value || dateKey();
   try {
-    if (!Trips.drivers.length) await loadTripDrivers();
-    const res = await api('/rest/v1/assignments?select=*&work_date=eq.' + day + '&order=driver_name.asc,so_no.asc');
+    if (!Ord.drivers.length) await loadOrderDrivers();
+    const res = await api('/rest/v1/assignments?select=*&or=(work_date.eq.' + day + ',status.in.(unassigned,assigned,out,pod_pending),and(status.eq.returned,hub_received_at.is.null))&order=customer.asc');
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    Trips.rows = await res.json(); $('#tripMsg').hidden = true;
-  } catch (e) { $('#tripMsg').hidden = false; $('#tripMsg').textContent = 'Could not load trips. Was the "assignments" SQL step run in Supabase?'; }
-  renderTrips();
+    Ord.rows = await res.json(); $('#tripMsg').hidden = true;
+    Ord.sel = new Set([...Ord.sel].filter(id => Ord.rows.some(r => r.id === id && ['unassigned', 'assigned'].includes(r.status))));
+  } catch (e) { $('#tripMsg').hidden = false; $('#tripMsg').textContent = 'Could not load orders. Was the Orders SQL step run in Supabase?'; }
+  renderOrders();
 }
-function renderTrips() {
-  const by = new Map(); Trips.rows.forEach(r => { (by.get(r.driver_name) || by.set(r.driver_name, []).get(r.driver_name)).push(r); });
-  const cnt = (l, s) => l.filter(r => r.status === s).length;
-  const all = Trips.rows, pend = cnt(all, 'assigned'), toHub = all.filter(r => r.status === 'returned' && !r.hub_received_at).length;
-  $('#tripTotal').innerHTML = all.length ? `<div class="big">${all.length} deliveries assigned${toHub ? ` · ${toHub} returned parcel${toHub > 1 ? 's' : ''} not yet at hub` : ''}</div>${stackBar(all)}${legendHtml(all)}` : 'No deliveries for this date. Upload the Excel.';
-  const dot = $('#cnt-trips'); if (dot) { const n = (($('#tripDate').value || dateKey()) === dateKey()) ? pend : 0; dot.hidden = !n; dot.textContent = n; }
-  $('#tripAdmin').innerHTML = [...by.entries()].map(([name, l]) => {
-    const p = cnt(l, 'assigned'), op = Trips.open.has(name);
-    const rows = op ? `<div class="rows">${l.map(r => `<div class="r"><div><b>${esc(r.so_no)}</b>${r.inv_no ? ' · ' + esc(r.inv_no) : ''}<small>${esc(r.customer || '')}${r.status === 'handed_over' ? ' · to ' + esc(r.handed_to || '') : ''}${r.status === 'returned' ? ' · ' + esc(r.note || '') : ''}</small></div>`
-      + `<div>${r.status === 'returned' ? (r.hub_received_at ? '<span class="tchip delivered">✓ At hub</span>' : `<button class="btn sm primary" data-hub="${r.id}" type="button">Received at hub</button>`) : `<span class="tchip ${r.status}">${TRIP_LABEL[r.status]}</span>`}</div></div>`).join('')}</div>` : '';
-    const ret = l.filter(r => r.status === 'returned'), got = ret.filter(r => r.hub_received_at).length;
-    return `<li class="tdrv"><button data-tdrv="${esc(name)}" type="button"><div class="nm">${esc(name)} <span class="tchip ${p ? '' : 'delivered'}">${p ? p + ' pending' : 'all done'}</span></div>`
-      + `<div class="sm">${l.length} assigned · ${cnt(l, 'delivered')} delivered · ${cnt(l, 'handed_over')} handed over · ${ret.length} returned${ret.length ? ` (${got} at hub)` : ''}</div>${stackBar(l)}</button>${rows}</li>`;
-  }).join('');
+function ordShown() {
+  const q = Ord.q.trim().toLowerCase();
+  return Ord.rows.filter(r => bucketOf(r) === Ord.f && (!Ord.drv || r.driver_name === Ord.drv) && (!q || [r.customer, r.so_no, r.inv_no].some(x => (x || '').toLowerCase().includes(q))));
+}
+function renderOrders() {
+  const cnt = k => Ord.rows.filter(r => bucketOf(r) === k && (!Ord.drv || r.driver_name === Ord.drv)).length;
+  $('#ordPipe').innerHTML = PIPE.map(([k, t, c]) => `<button type="button" role="tab" class="${Ord.f === k ? 'on' : ''}" data-pipe="${k}" aria-selected="${Ord.f === k}"><b>${cnt(k)}</b><span>${t}</span><i style="background:${c}"></i></button>`).join('');
+  $('#ordSub').textContent = new Date(($('#tripDate').value || dateKey()) + 'T12:00').toLocaleDateString([], {weekday: 'short', day: 'numeric', month: 'short'}) + ' · ' + Ord.rows.length + ' orders';
+  const open = Ord.rows.filter(r => ['unassigned', 'assigned'].includes(r.status)).length;
+  const dot = $('#cnt-orders'); if (dot) { const n = Ord.rows.filter(r => r.status === 'unassigned').length; dot.hidden = !n; dot.textContent = n; }
+  const vis = ordShown();
+  $('#ordList').innerHTML = vis.length ? vis.map(r => {
+    const selectable = ['unassigned', 'assigned'].includes(r.status);
+    const sub = r.status === 'unassigned' && r.flag === 'not_picked' ? `Not picked by ${esc(r.prev_driver || 'driver')}: ${esc(r.note || '')}` : r.driver_name ? 'Driver: ' + esc(r.driver_name) : '';
+    return `<li class="ord" data-id="${r.id}">${selectable ? `<button class="rb ${Ord.sel.has(r.id) ? 'on' : ''}" data-osel="${r.id}" type="button" aria-label="Select"></button>` : '<span></span>'}`
+      + `<div><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}${r.inv_no ? ' · ' + esc(r.inv_no) : ''}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>${kchip(r)}</li>`;
+  }).join('') : `<li class="empty">${Ord.rows.length ? 'No orders in this group.' : 'No orders for this date. Tap Upload Excel.'}</li>`;
+  const n = Ord.sel.size; $('#ordBar').hidden = !n; $('#ordSel').textContent = n + ' selected';
+  const allAssigned = n && [...Ord.sel].every(id => (Ord.rows.find(r => r.id === id) || {}).status === 'assigned'); $('#ordUnasg').hidden = !allAssigned;
+}
+async function openOrderDetail(id) {
+  const r = Ord.rows.find(x => x.id === id); if (!r) return;
+  $('#ordSheet').hidden = false;
+  const facts = [r.driver_name && 'Driver: <b>' + esc(r.driver_name) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>'].filter(Boolean).join(' · ');
+  const act = r.status === 'returned' && !r.hub_received_at ? `<button class="btn primary main" data-hubrec="${r.id}" type="button">Received at hub</button>` : '';
+  $('#ordDetail').innerHTML = `<div class="dtitle"><div><div class="m">${esc(r.so_no)}${r.inv_no ? ' · ' + esc(r.inv_no) : ''}</div><h3>${esc(r.customer || r.so_no)}</h3></div>${kchip(r)}</div>${facts ? `<div class="m" style="margin:8px 0">${facts}</div>` : ''}${act}<h4 style="margin:16px 0 10px">History</h4><div class="steps" id="ordHist"><div class="m">Loading…</div></div>`;
+  try {
+    const res = await api('/rest/v1/order_events?select=at,actor,kind,info&assignment_id=eq.' + id + '&order=at.asc'); if (!res.ok) throw 0;
+    const ev = await res.json();
+    $('#ordHist').innerHTML = ev.length ? ev.map(x => `<div class="w"><div class="ln"><span class="ic ${/pod|hub|complete/.test(x.kind) ? 'g' : /assign|uploaded/.test(x.kind) ? 'a' : /not_picked|returned/.test(x.kind) ? 'r' : ''}">●</span><div><b>${esc((EV[x.kind] || (() => x.kind))(x.info))}</b><small>${evTime(x.at)} · ${esc(x.actor || '')}</small></div></div></div>`).join('') : '<div class="m">No history yet.</div>';
+  } catch (e) { $('#ordHist').innerHTML = '<div class="m">Could not load history.</div>'; }
+}
+function openAssignSheet() {
+  Ord.pick = null; const n = Ord.sel.size, today = {};
+  Ord.rows.forEach(r => { if (r.driver_name && ['assigned', 'out', 'pod_pending'].includes(r.status)) today[r.driver_name] = (today[r.driver_name] || 0) + 1; });
+  $('#asgTitle').textContent = `Assign ${n} order${n > 1 ? 's' : ''}`;
+  $('#asgList').innerHTML = Ord.drivers.map(d => `<button type="button" class="dr" data-drv="${d.id}"><span class="r"></span><b>${esc(d.display_name)}</b><small>${today[d.display_name] || 0} open</small></button>`).join('') || '<div class="m">No drivers yet.</div>';
+  $('#asgOk').disabled = true; $('#asgOk').textContent = 'Assign'; $('#asgSheet').hidden = false;
 }
 function renderTripPreview() {
-  const box = $('#tripPreview'), P = Trips.parsed;
+  const box = $('#tripPreview'), P = Ord.parsed;
   if (!P) { box.hidden = true; return; }
   const names = new Map(); P.rows.forEach(r => names.set(r.driver, (names.get(r.driver) || 0) + 1));
-  const match = n => Trips.drivers.find(d => (d.display_name || '').toLowerCase() === n.toLowerCase());
-  const lines = [...names.entries()].map(([n, c]) => match(n) ? `<div>✓ <b>${esc(n)}</b>: ${c} SO</div>` : `<div class="bad">✗ <b>${esc(n)}</b>: ${c} SO, no driver login with this name. They will be skipped.</div>`).join('');
+  const match = n => Ord.drivers.find(d => (d.display_name || '').toLowerCase() === n.toLowerCase());
+  const lines = [...names.entries()].map(([n, c]) => match(n) ? `<div>✓ <b>${esc(n)}</b>: ${c} orders will be Assigned</div>` : `<div class="warn">• <b>${esc(n)}</b>: ${c} orders, no driver login with this name. They will be Unassigned.</div>`).join('');
   const noInv = P.rows.filter(r => !r.inv).length;
   box.hidden = false;
-  box.innerHTML = `<strong>${esc(P.name)}: ${P.rows.length} deliveries for ${esc($('#tripDate').value)}</strong>${lines}`
-    + (noInv ? `<div class="warn">${noInv} row${noInv > 1 ? 's have' : ' has'} no invoice number. The driver will type it when uploading.</div>` : '')
-    + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button">Assign to drivers</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
+  box.innerHTML = `<strong>${esc(P.name)}: ${P.rows.length} orders for ${esc($('#tripDate').value)}</strong>${lines}`
+    + (noInv ? `<div class="warn">${noInv} order${noInv > 1 ? 's have' : ' has'} no invoice number. The driver will type it when uploading.</div>` : '')
+    + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button">Add orders</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
 }
 async function tripFileChosen(file) {
   try {
-    if (!Trips.drivers.length) await loadTripDrivers();
+    if (!Ord.drivers.length) await loadOrderDrivers();
     const rows = parseAssignGrid(await readXlsxGrid(await file.arrayBuffer()));
-    Trips.parsed = {rows, name: file.name}; $('#tripMsg').hidden = true; renderTripPreview();
-  } catch (e) { Trips.parsed = null; renderTripPreview(); $('#tripMsg').hidden = false; $('#tripMsg').textContent = e.message || 'Could not read this file.'; }
+    Ord.parsed = {rows, name: file.name}; $('#tripMsg').hidden = true; renderTripPreview();
+  } catch (e) { Ord.parsed = null; renderTripPreview(); $('#tripMsg').hidden = false; $('#tripMsg').textContent = e.message || 'Could not read this file.'; }
 }
 async function tripAssign() {
-  const P = Trips.parsed, day = $('#tripDate').value || dateKey(); if (!P) return;
-  const out = [], skipped = new Set();
-  P.rows.forEach(r => {
-    const d = Trips.drivers.find(x => (x.display_name || '').toLowerCase() === r.driver.toLowerCase());
-    if (!d) { skipped.add(r.driver); return; }
-    out.push({work_date: day, driver_id: d.id, driver_name: d.display_name, vehicle: r.vehicle || null, so_no: r.so, customer: r.customer || null, inv_no: r.inv || null});
+  const P = Ord.parsed, day = $('#tripDate').value || dateKey(); if (!P) return;
+  const out = P.rows.map(r => {
+    const d = Ord.drivers.find(x => (x.display_name || '').toLowerCase() === r.driver.toLowerCase());
+    return {work_date: day, driver_id: d ? d.id : null, driver_name: d ? d.display_name : null, vehicle: r.vehicle || null, so_no: r.so, customer: r.customer || null, inv_no: r.inv || null, status: d ? 'assigned' : 'unassigned'};
   });
-  if (!out.length) { toast('No matching drivers', true); return; }
   try {
-    const res = await api('/rest/v1/assignments?on_conflict=work_date,so_no', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(out)});
+    const before = Ord.rows.length;
+    const res = await api('/rest/v1/assignments?on_conflict=work_date,so_no', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal'}, body: JSON.stringify(out)});
     if (!res.ok) throw new Error('Server refused (' + res.status + ')');
-    Trips.parsed = null; renderTripPreview(); toast(out.length + ' deliveries assigned ✓' + (skipped.size ? ' (skipped: ' + [...skipped].join(', ') + ')' : ''));
-    await loadTrips();
-  } catch (e) { toast(e instanceof NetError ? 'No internet' : e.message, true); }
+    Ord.parsed = null; renderTripPreview(); await loadOrders();
+    const added = Ord.rows.length - before; toast(added + ' new order' + (added === 1 ? '' : 's') + ' added ✓' + (out.length - added > 0 ? ' (' + (out.length - added) + ' were already there)' : ''));
+    Ord.f = Ord.rows.some(r => r.status === 'unassigned') ? 'unassigned' : 'assigned'; renderOrders();
+  } catch (e) { toast(netMsg(e), true); }
 }
 document.addEventListener('click', async e => {
   const t = e.target;
-  if (t.id === 'btnTripUpload') $('#tripFile').click();
-  else if (t.id === 'btnTripRefresh') loadTrips();
-  else if (t.id === 'tripGo') tripAssign();
-  else if (t.id === 'tripNo') { Trips.parsed = null; renderTripPreview(); }
-  else if (t.closest('[data-tdrv]')) { const n = t.closest('[data-tdrv]').dataset.tdrv; Trips.open.has(n) ? Trips.open.delete(n) : Trips.open.add(n); renderTrips(); }
-  else if (t.dataset && t.dataset.hub) {
-    try {
-      const res = await api('/rest/v1/assignments?id=eq.' + t.dataset.hub, {method: 'PATCH', headers: {'Content-Type': 'application/json', Prefer: 'return=minimal'}, body: JSON.stringify({hub_received_at: new Date().toISOString()})});
-      if (!res.ok) throw new Error('Server refused (' + res.status + ')');
-      await loadTrips();
-    } catch (x) { toast(x.message, true); }
-  }
+  try {
+    const pipe = t.closest('[data-pipe]'), sel = t.closest('[data-osel]'), row = t.closest('li.ord'), dr = t.closest('[data-drv]'), hub = t.closest('[data-hubrec]');
+    if (t.id === 'btnTripUpload') $('#tripFile').click();
+    else if (t.id === 'tripGo') await tripAssign();
+    else if (t.id === 'tripNo') { Ord.parsed = null; renderTripPreview(); }
+    else if (pipe) { Ord.f = pipe.dataset.pipe; renderOrders(); }
+    else if (sel) { const id = sel.dataset.osel; Ord.sel.has(id) ? Ord.sel.delete(id) : Ord.sel.add(id); renderOrders(); }
+    else if (hub) { await rpc('admin_hub_received', {p_id: hub.dataset.hubrec}); await loadOrders(); openOrderDetail(hub.dataset.hubrec); }
+    else if (row && $('#viewOrders') && $('#viewOrders').contains(row)) openOrderDetail(row.dataset.id);
+    else if (t.id === 'ordClose' || t.id === 'ordSheet') $('#ordSheet').hidden = true;
+    else if (t.id === 'ordAsg') openAssignSheet();
+    else if (t.id === 'ordUnasg') { await rpc('admin_unassign', {p_ids: [...Ord.sel]}); Ord.sel.clear(); toast('Unassigned'); await loadOrders(); }
+    else if (t.id === 'asgCancel' || t.id === 'asgSheet') $('#asgSheet').hidden = true;
+    else if (dr) { Ord.pick = dr.dataset.drv; document.querySelectorAll('#asgList .dr').forEach(b => b.classList.toggle('on', b === dr)); $('#asgOk').disabled = false; $('#asgOk').textContent = 'Assign to ' + dr.querySelector('b').textContent; }
+    else if (t.id === 'asgOk' && Ord.pick) { const ids = [...Ord.sel]; await rpc('admin_assign', {p_ids: ids, p_driver: Ord.pick}); $('#asgSheet').hidden = true; Ord.sel.clear(); toast(ids.length + ' assigned ✓'); await loadOrders(); }
+  } catch (x) { toast(netMsg(x), true); }
 });
 $('#tripDate').value = dateKey();
-$('#tripDate').addEventListener('change', loadTrips);
+$('#tripDate').addEventListener('change', loadOrders);
+$('#ordQ').addEventListener('input', e => { Ord.q = e.target.value; renderOrders(); });
+$('#ordDrv').addEventListener('change', e => { Ord.drv = e.target.value; renderOrders(); });
 $('#tripFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) tripFileChosen(f); });
 /* =====================================================================
    Boot
