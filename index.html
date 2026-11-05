@@ -174,6 +174,12 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
 .autorow input:checked{background:var(--accent);opacity:1}
 .autorow input:checked::after{transform:translateX(20px)}
 .autorow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.dot.ok{background:#16a34a;color:#fff}
+.drv{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card,#fff);border:1px solid var(--line,#e5e7eb);border-radius:12px;margin-bottom:8px}
+.drv .led{width:12px;height:12px;border-radius:50%;background:#9ca3af;flex:none}
+.drv.on .led{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.2)}
+.drv .nm{font-weight:600}.drv .st{font-size:13px;color:#6b7280}.drv.on .st{color:#15803d;font-weight:600}
 </style>
 </head>
 <body class="booting">
@@ -181,7 +187,7 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
   <div><h1>Invoice &amp; POD Manager</h1><div class="sub" id="whoLine">Invoices and delivery PODs</div></div>
   <div class="hdr-actions"><button class="btn primary" id="btnNew" type="button">+ New invoice</button><button class="btn" id="btnSignOut" type="button" hidden>Sign out</button></div>
 </div></header>
-<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">My invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">Driver PODs<span class="dot" id="cnt-inbox" hidden>0</span></button></div></div></nav>
+<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">My invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">Driver PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button></div></div></nav>
 
 <main class="wrap">
  <div id="viewInvoices">
@@ -223,6 +229,12 @@ body.driver #btnUpload{min-height:46px;font-size:16px;padding:0 22px}
   </div>
   <ul class="list" id="ilist" aria-live="polite"></ul>
   <div style="text-align:center;margin-top:12px"><button class="btn" id="btnMore" type="button" hidden>Load older</button></div>
+ </div>
+
+ <div id="viewDrivers" hidden>
+  <div id="drvMsg" class="banner" hidden></div>
+  <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
+  <ul class="list" id="drvList" aria-live="polite"></ul>
  </div>
 </main>
 <footer class="note">Invoice format: INV + 7 digits (e.g. INV1234567). My invoices stay on this phone. Driver PODs are kept safely on the server.</footer>
@@ -606,12 +618,15 @@ function detectDocument(canvas) {
       for (let x = 0; x < w; x++) { onBorder += comp.mask[x] + comp.mask[(h - 1) * w + x]; }
       for (let y = 1; y < h - 1; y++) { onBorder += comp.mask[y * w] + comp.mask[y * w + w - 1]; }
       const borderFrac = onBorder / (2 * (w + h));
+      if (borderFrac > 0.3) continue;      // touches the photo edge on several sides: not a page lying inside the frame
       const score = solidity * (1 - Math.min(1, borderFrac * 1.15)) * Math.sqrt(frac);
       if (!best || score > best.score) best = {score, quad, solidity, frac, name: c.name};
     }
-    if (!best || best.solidity < 0.78) return {found: false, corners: fullQuad};
+    if (!best || best.solidity < 0.85) return {found: false, corners: fullQuad};
     const q = best.quad.map(p => ({x: Math.min(W0, Math.max(0, p.x / s)), y: Math.min(H0, Math.max(0, p.y / s))}));
     const minDim = Math.min(W0, H0);
+    const rTB = dist(q[0], q[1]) / dist(q[3], q[2]), rLR = dist(q[0], q[3]) / dist(q[1], q[2]);
+    if (!(rTB > 0.7 && rTB < 1.43 && rLR > 0.7 && rLR < 1.43)) return {found: false, corners: fullQuad};   // opposite sides must be alike
     if (!isConvexQuad(q) || polyArea(q) < 0.12 * W0 * H0) return {found: false, corners: fullQuad};
     for (let i = 0; i < 4; i++) if (dist(q[i], q[(i + 1) % 4]) < 0.15 * minDim) return {found: false, corners: fullQuad};
     return {found: true, corners: q, method: best.name};
@@ -1436,6 +1451,8 @@ async function demoApi(path, opts) {
   const empty = code => new Response(null, {status: code});
   const u = new URL(path, 'http://x'), p = u.pathname, m = opts.method || 'GET', admin = session.role === 'admin';
   const rows = async () => (await Demo.all()).filter(x => x.k.startsWith('row:')).map(x => x.v);
+  if (p === '/rest/v1/rpc/touch_seen') return json(200, null);
+  if (p === '/rest/v1/profiles' && u.searchParams.get('role')) return json(200, [{display_name: 'demo driver', last_seen: new Date().toISOString()}]);
   if (p === '/rest/v1/profiles') return json(200, [{role: session.role, display_name: session.name}]);
   if (p === '/rest/v1/pod_uploads') {
     if (m === 'POST') {
@@ -1803,17 +1820,49 @@ $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer' || e.
 
 let view = 'invoices';
 function setView(v) {
-  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#btnNew').hidden = v !== 'invoices';
+  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (v === 'inbox') loadInbox();
+  if (v === 'drivers') loadDrivers();
+}
+/* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
+const ONLINE_MS = 150000;
+function pingSeen() {
+  if (!session || session.demo || document.hidden) return;
+  api('/rest/v1/rpc/touch_seen', {method: 'POST', body: '{}', headers: {'Content-Type': 'application/json'}}).catch(() => {});
+}
+function agoText(t) {
+  if (!t) return 'Never opened the app';
+  const s = Math.max(0, (Date.now() - new Date(t).getTime()) / 1000);
+  if (s < 60) return 'Offline · just now';
+  if (s < 3600) return 'Offline · last seen ' + Math.round(s / 60) + ' min ago';
+  if (s < 86400) return 'Offline · last seen ' + Math.round(s / 3600) + ' h ago';
+  return 'Offline · last seen ' + new Date(t).toLocaleDateString([], {day: 'numeric', month: 'short'});
+}
+async function loadDrivers() {
+  try {
+    const res = await api('/rest/v1/profiles?select=display_name,last_seen&role=eq.driver&order=display_name');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json(), now = Date.now();
+    const on = r => r.last_seen && now - new Date(r.last_seen).getTime() < ONLINE_MS;
+    rows.sort((a, b) => (on(b) - on(a)) || String(a.display_name).localeCompare(String(b.display_name)));
+    const n = rows.filter(on).length;
+    $('#cnt-online').hidden = !n; $('#cnt-online').textContent = n;
+    $('#drvSummary').textContent = n + ' online · ' + (rows.length - n) + ' offline';
+    $('#drvMsg').hidden = true;
+    $('#drvList').innerHTML = rows.length ? rows.map(r => `<li class="drv ${on(r) ? 'on' : ''}"><span class="led"></span><div><div class="nm">${esc(r.display_name)}</div><div class="st">${on(r) ? '● Online now' : esc(agoText(r.last_seen))}</div></div></li>`).join('')
+      : '<li class="empty">No drivers yet.</li>';
+  } catch (e) { $('#drvMsg').hidden = false; $('#drvMsg').textContent = 'Could not load drivers. Check the one-time Supabase step (last_seen) was run.'; }
 }
 document.querySelectorAll('.vtab').forEach(t => t.addEventListener('click', () => setView(t.dataset.view)));
 $('#btnSignOut').addEventListener('click', () => signOut());
+$('#btnDrvRefresh').addEventListener('click', loadDrivers);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || !session) return;
   if (App.role === 'admin' && view === 'inbox') loadInbox();
-  if (App.role === 'driver') syncOutbox();
+  if (App.role === 'admin' && view === 'drivers') loadDrivers();
+  if (App.role === 'driver') { syncOutbox(); pingSeen(); }
 });
 
 function startApp() {
@@ -1824,12 +1873,14 @@ function startApp() {
     openEditor(null);
     Outbox.open().then(() => syncOutbox());
     setInterval(() => { if (!document.hidden) syncOutbox(); }, 30000);
-    addEventListener('online', () => syncOutbox());
+    addEventListener('online', () => { syncOutbox(); pingSeen(); });
+    pingSeen(); setInterval(pingSeen, 60000);
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
-    setView(LS.get('pod.view') === 'inbox' ? 'inbox' : 'invoices');
-    loadInbox();
+    setView(['inbox', 'drivers'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
+    loadInbox(); if (!session.demo) loadDrivers();
+    setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
     addEventListener('online', () => { if (view === 'inbox') loadInbox(); });
   }
   verifyRole();
