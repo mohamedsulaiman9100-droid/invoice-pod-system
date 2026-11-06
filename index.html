@@ -416,6 +416,8 @@ body.driver #edClose{display:none}
 .chip.warnchip{background:var(--danger-bg);color:var(--danger)}
 .tabs{overflow-x:auto;flex-wrap:nowrap}.itab{white-space:nowrap}
 .tabs{overflow:visible;flex-wrap:wrap;gap:4px}
+
+.kmchips button{padding:7px 11px;font-size:13px;border-radius:999px}
 </style>
 </head>
 <body class="booting">
@@ -474,7 +476,7 @@ body.driver #edClose{display:none}
   <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
   <section class="card" style="margin-bottom:12px"><h3>🏆 Top drivers this week</h3><div class="hint">Orders completed with POD, since Monday</div><div class="topList"></div></section>
   <ul class="list" id="drvList" aria-live="polite"></ul>
-  <section class="card" id="kmBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Kilometres</h3><button class="btn sm" id="kmCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-kmr="week" type="button">7 days</button><button class="btn sm" data-kmr="month" type="button">This month</button><button class="btn sm" data-kmr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="kmFrom" aria-label="From"><input type="date" id="kmTo" aria-label="To"></div><div class="kmtot"></div><div class="kmrows"></div></section>
+  <section class="card" id="kmBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Kilometres</h3><button class="btn sm" id="kmCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-kmr="week" type="button">7 days</button><button class="btn sm" data-kmr="month" type="button">This month</button><button class="btn sm" data-kmr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="kmFrom" aria-label="From"><input type="date" id="kmTo" aria-label="To"></div><div class="rs kmchips" style="margin:10px 0 0"></div><div class="kmtot"></div><div class="kmrows"></div></section>
  </div>
  <div id="viewOrders" hidden>
   <div id="tripMsg" class="banner" hidden></div>
@@ -2592,7 +2594,7 @@ function renderKm() {
   const veh = (open && open.vehicle) || Km.vehicle || (last && last.vehicle) || (Trip.rows.find(r => r.vehicle) || {}).vehicle || '';
   const vt = Km.vtype || (open && open.vehicle_type) || (last && last.vehicle_type) || guessType(veh) || '';
   const keep = document.activeElement && document.activeElement.id === 'kmIn' ? $('#kmIn').value : '';
-  if (st === 'need_start') c.innerHTML = `<h3>Start your day</h3><div class="hint">Enter the odometer reading before you pick orders.</div><label class="kmf">Odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="0" placeholder="e.g. 45210" value="${keep}"></label><div class="kmf">Vehicle type</div><div class="rs" id="kmTypes">${VTYPES.map(x => `<button type="button" class="${x === vt ? 'on' : ''}" data-vt="${x}">${x}</button>`).join('')}</div><label class="kmf" style="margin-top:4px">Vehicle number<input id="kmVeh" type="text" placeholder="e.g. W-37223" value="${esc(veh)}"></label><button class="btn primary main" id="kmStart" type="button">Start day</button>`;
+  if (st === 'need_start') c.innerHTML = `<h3>Start your day</h3><div class="hint">Enter the odometer reading before you pick orders.</div><label class="kmf">Odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="0" placeholder="e.g. 45210" value="${keep}"></label><div class="kmf">Vehicle type</div><div class="rs" id="kmTypes">${VTYPES.map(x => `<button type="button" class="${x === vt ? 'on' : ''}" data-vt="${x}">${x}</button>`).join('')}</div><label class="kmf" style="margin-top:4px">Vehicle number<input id="kmVeh" type="text" placeholder="e.g. W-37223" autocapitalize="characters" value="${esc(veh)}"></label><div class="warn" id="kmMsg" style="margin-top:8px"></div><button class="btn primary main" id="kmStart" type="button">Start day</button>`, kmFormCheck();
   else if (st === 'stale') c.innerHTML = `<h3>Close ${esc(open.day)} first</h3><div class="hint">Enter the end km of that day to continue. Started at ${fmtKm(open.start_km)} km.</div><label class="kmf">End odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="0" value="${keep}"></label><button class="btn primary main" id="kmEnd" type="button">Close day</button>`;
   else if (st === 'open') c.innerHTML = `<div class="kmbar"><div><b>🚚 ${esc(open.vehicle_type || 'Day')} · ${fmtKm(open.start_km)} km</b><div class="m">${esc(open.vehicle || 'Day started')}</div></div>${Km.endOpen ? '' : '<button class="btn" id="kmAsk" type="button">End day</button>'}</div>${Km.endOpen ? `<label class="kmf">End odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="${open.start_km}" value="${keep}"></label><div class="two"><button class="btn primary" id="kmEnd" type="button">Close day</button><button class="btn" id="kmCancel" type="button">Cancel</button></div>` : ''}`;
   else { const d = Km.days.find(x => x.day === dateKey()); c.innerHTML = `<div class="kmbar"><div><b>✓ Day closed · ${fmtKm(d.end_km - d.start_km)} km</b><div class="m">${fmtKm(d.start_km)} → ${fmtKm(d.end_km)} km</div></div></div>`; }
@@ -2606,21 +2608,34 @@ document.addEventListener('click', async e => {
     if (id === 'kmAsk') { Km.endOpen = true; renderKm(); $('#kmIn').focus(); return; }
     if (id === 'kmCancel') { Km.endOpen = false; renderKm(); return; }
     const v = parseInt($('#kmIn').value, 10); if (!(v >= 0)) { toast('Enter the odometer reading', true); return; }
-    if (id === 'kmStart') { Km.vehicle = ($('#kmVeh').value || '').trim(); const ty = Km.vtype || guessType(Km.vehicle) || (Km.days[0] || {}).vehicle_type; if (!ty) { toast('Choose the vehicle type', true); return; } await kmRpc('km_start', {p_km: v, p_vehicle: Km.vehicle, p_type: ty}); toast('Day started ✓'); }
+    if (id === 'kmStart') { Km.vehicle = ($('#kmVeh').value || '').trim().toUpperCase().replace(/\s+/g, ' '); if (Km.vehicle.length < 3) { toast('Enter the vehicle number', true); $('#kmVeh').focus(); return; } const ty = Km.vtype || guessType(Km.vehicle) || (Km.days[0] || {}).vehicle_type; if (!ty) { toast('Choose the vehicle type', true); return; } await kmRpc('km_start', {p_km: v, p_vehicle: Km.vehicle, p_type: ty}); toast('Day started ✓'); }
     else { await kmRpc('km_end', {p_km: v}); Km.endOpen = false; toast('Day closed ✓'); }
     await loadKm();
   } catch (x) { toast(netMsg(x), true); }
 });
 
+function kmFormCheck() {
+  const b = $('#kmStart'); if (!b) return;
+  const o = $('#kmIn').value, v = ($('#kmVeh').value || '').trim(), ok = o !== '' && v.length >= 3 && (Km.vtype || guessType(v) || (Km.days[0] || {}).vehicle_type);
+  b.style.opacity = ok ? '' : '.45';
+  const last = Km.days.find(d => d.end_km != null), m = $('#kmMsg'); let t = '';
+  if (o === '') t = 'Enter the odometer reading'; else if (v.length < 3) t = 'Enter the vehicle number'; else if (!ok) t = 'Choose the vehicle type';
+  else if (last && parseInt(o, 10) < last.end_km) t = 'Last end km was ' + fmtKm(last.end_km) + ' — please check';
+  if (m) m.textContent = t ? '⚠ ' + t : '';
+}
+document.addEventListener('input', e => { if (e.target.id === 'kmVeh') { const el = e.target, p = el.selectionStart; el.value = el.value.toUpperCase(); try { el.setSelectionRange(p, p); } catch (x) {} } if (e.target.id === 'kmIn' || e.target.id === 'kmVeh') kmFormCheck(); });
+document.addEventListener('click', e => { if (e.target.closest('[data-vt]')) setTimeout(kmFormCheck, 0); });
+
 /* ---- admin: switch per driver + report ---- */
-const KmA = {rows: [], edit: null};
+let KmSel = []; try { KmSel = JSON.parse(localStorage.getItem('kmSel') || '[]'); } catch (e) {}
+const KmA = {rows: [], all: [], edit: null};
 async function loadKmReport() {
   const box = $('#kmBox'); if (!box || !session || session.demo) return;
   const fi = $('#kmFrom'), ti = $('#kmTo');
   if (!fi.value) { const n = new Date(); fi.value = dateKey(new Date(n.getFullYear(), n.getMonth(), 1)); ti.value = dateKey(); }
   try {
     const r = await api('/rest/v1/km_days?select=*&day=gte.' + fi.value + '&day=lte.' + ti.value + '&order=day.desc,driver_name.asc&limit=1000'); if (!r.ok) throw 0;
-    KmA.rows = await r.json(); renderKmReport();
+    KmA.all = await r.json(); renderKmReport();
   } catch (e) { box.hidden = true; }
 }
 function kmFlags(rows) {
@@ -2630,7 +2645,12 @@ function kmFlags(rows) {
   return flag;
 }
 function renderKmReport() {
-  const box = $('#kmBox'), rows = KmA.rows; if (!box) return;
+  const box = $('#kmBox'); if (!box) return;
+  const names = [...new Set(KmA.all.map(r => r.driver_name).concat((window.__kmDrivers || []).map(d => d.display_name)).filter(Boolean))].sort();
+  KmSel = KmSel.filter(n => names.includes(n));
+  const rows = KmA.rows = KmSel.length ? KmA.all.filter(r => KmSel.includes(r.driver_name)) : KmA.all;
+  const ch = box.querySelector('.kmchips');
+  if (ch) ch.innerHTML = names.length > 1 ? `<button type="button" class="${KmSel.length ? '' : 'on'}" data-kmd="">All</button>` + names.map(n => `<button type="button" class="${KmSel.includes(n) ? 'on' : ''}" data-kmd="${esc(n)}">${esc(n)}</button>`).join('') : '';
   const tracked = (window.__kmDrivers || []).length;
   box.hidden = !tracked && !rows.length;
   const flags = kmFlags(rows), tot = {};
@@ -2648,7 +2668,9 @@ function openKmEdit(id) {
 document.addEventListener('click', async e => {
   const t = e.target, row = t.closest('[data-kmedit]'), sw = t.closest('[data-kmsw]');
   try {
-    if (row) openKmEdit(row.dataset.kmedit);
+    const dc = t.closest('[data-kmd]');
+    if (dc) { const n = dc.dataset.kmd; KmSel = !n ? [] : KmSel.includes(n) ? KmSel.filter(x => x !== n) : KmSel.concat(n); try { localStorage.setItem('kmSel', JSON.stringify(KmSel)); } catch (x) {} renderKmReport(); }
+    else if (row) openKmEdit(row.dataset.kmedit);
     else if (t.id === 'kmeCancel' || t.id === 'kmSheet') $('#kmSheet').hidden = true;
     else if (t.id === 'kmeOk' && KmA.edit) { const s = parseInt($('#kmeStart').value, 10), en = $('#kmeEnd').value === '' ? null : parseInt($('#kmeEnd').value, 10);
       if (!(s >= 0)) { toast('Enter start km', true); return; }
