@@ -394,6 +394,28 @@ header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
 .drv .tgl{margin-left:auto;flex:none}.kmrow .m{font-size:12px}
 .kmrange{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.kmrange input{flex:1;min-width:130px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:40px}
 #kmTypes{margin-top:6px}#kmTypes button{flex:1;min-width:70px;min-height:46px;font-size:15px}
+
+/* ---- driver tabs ---- */
+#dnav{display:none}
+body.driver #dnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(0,0,0,.08)}
+#dnav button{appearance:none;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 2px;font-size:11.5px;font-weight:600;color:var(--muted);position:relative;cursor:pointer}
+#dnav i{font-style:normal;font-size:22px}#dnav button.on{color:var(--ink)}#dnav button.on::before{content:"";position:absolute;top:-7px;width:34px;height:3px;border-radius:9px;background:var(--brass)}
+#dnav sup{position:absolute;top:0;left:calc(50% + 8px);background:var(--brass);color:var(--brass-ink);border-radius:9px;font-size:10px;padding:1px 5px;font-weight:700}
+body.driver #editor{bottom:calc(66px + env(safe-area-inset-bottom))!important}
+body.driver #cardKm,body.driver #cardTrip,body.driver #cardTop,body.driver #cardMy,body.driver #cardPod,body.driver #cardNo,body.driver #outbox,body.driver #repBanner{display:none!important}
+body.driver[data-dtab="orders"] #cardKm:not([hidden]),body.driver[data-dtab="orders"] #cardTrip:not([hidden]),body.driver[data-dtab="top"] #cardTop,body.driver[data-dtab="mypods"] #cardMy,body.driver[data-dtab="upload"] #cardPod,body.driver[data-dtab="upload"] #cardNo,body.driver[data-dtab="upload"] #repBanner{display:block!important}
+body.driver[data-dtab="orders"] #outbox:not([hidden]),body.driver[data-dtab="upload"] #outbox:not([hidden]){display:block!important}
+body.driver:not([data-dtab="upload"]) #editor footer{display:none}
+body.driver #edClose{display:none}
+.socheck{margin-top:8px;font-size:13.5px;font-weight:600;border-radius:10px;padding:0}.socheck.ok,.socheck.wn{padding:9px 12px}
+.socheck.ok{background:var(--closed-bg);color:var(--closed)}.socheck.wn{background:var(--danger-bg);color:var(--danger)}
+.myc.lock{opacity:.72}.myc.appr{box-shadow:inset 0 0 0 2px var(--closed)}
+.kmin{width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:16px;min-height:46px;margin:8px 0}
+#linkList .dr{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}#linkList .dr small{display:block;color:var(--muted);margin-top:2px}
+.reason{margin:6px 0;padding:8px 10px;border-radius:8px;background:var(--surface-2);font-size:13px}.reqacts{display:flex;gap:8px;margin-top:8px}
+.chip.warnchip{background:var(--danger-bg);color:var(--danger)}
+.tabs{overflow-x:auto;flex-wrap:nowrap}.itab{white-space:nowrap}
+.tabs{overflow:visible;flex-wrap:wrap;gap:4px}
 </style>
 </head>
 <body class="booting">
@@ -427,6 +449,8 @@ header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
     <div class="tabs" role="tablist" aria-label="Filter driver uploads">
       <button class="itab" role="tab" data-itab="new" aria-selected="true">New<span class="n" id="icnt-new">0</span></button>
       <button class="itab" role="tab" data-itab="done" aria-selected="false">Downloaded<span class="n" id="icnt-done">0</span></button>
+      <button class="itab" role="tab" data-itab="req" aria-selected="false">Requests<span class="n" id="icnt-req">0</span></button>
+      <button class="itab" role="tab" data-itab="na" aria-selected="false">Not assigned<span class="n" id="icnt-na">0</span></button>
       <button class="itab" role="tab" data-itab="all" aria-selected="false">All<span class="n" id="icnt-all">0</span></button>
     </div>
     <div class="search"><input id="isearch" type="search" inputmode="numeric" placeholder="Search invoice number…" aria-label="Search driver uploads by invoice number"></div>
@@ -534,7 +558,12 @@ header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
 <div class="tsheet" id="kmSheet" hidden><div class="tbox"><div class="cap"></div><h3 id="kmeTitle">Km</h3>
   <label class="kmf">Start km<input id="kmeStart" type="number" inputmode="numeric"></label>
   <label class="kmf">End km (empty = day still open)<input id="kmeEnd" type="number" inputmode="numeric"></label>
-  <div class="two"><button class="btn" id="kmeCancel" type="button">Cancel</button><button class="btn primary" id="kmeOk" type="button">Save</button></div></div></div>
+  <div class="two"><button class="btn" id="kmeCancel" type="button">Cancel</button><button class="btn primary" id="kmeOk" type="button">Save</button></div><button class="btn danger main" id="kmeDel" type="button">Delete entry</button></div></div>
+
+<nav id="dnav" aria-label="Driver menu"><button type="button" data-dtab="orders"><i>📦</i><span>Orders</span><sup id="dnOrd" hidden></sup></button><button type="button" data-dtab="upload"><i>📷</i><span>Upload POD</span></button><button type="button" data-dtab="mypods"><i>🗂</i><span>My PODs</span><sup id="dnMy" hidden></sup></button><button type="button" data-dtab="top"><i>🏆</i><span>Top</span></button></nav>
+<div class="tsheet" id="reqSheet" hidden><div class="tbox"><div class="cap"></div><h3 id="reqTitle">Why change?</h3><div class="rs" id="reqReasons"></div><input id="tsNote" style="display:none"><input id="reqNote" class="kmin" placeholder="Note (optional)" autocomplete="off"><div class="two"><button class="btn" id="reqCancel" type="button">Cancel</button><button class="btn primary" id="reqOk" type="button">Send request</button></div></div></div>
+<div class="tsheet" id="chgSheet" hidden><div class="tbox"><div class="cap"></div><h3 id="chgTitle">Change SO number</h3><label class="kmf">SO- <input id="chgIn" inputmode="numeric" placeholder="0000000" autocomplete="off"></label><div class="socheck" id="chgInfo"></div><div class="two"><button class="btn" id="chgCancel" type="button">Cancel</button><button class="btn primary" id="chgOk" type="button">Change</button></div></div></div>
+<div class="tsheet" id="linkSheet" hidden><div class="tbox tall"><div class="cap"></div><h3 id="linkTitle">Link to order</h3><input id="linkQ" class="kmin" type="search" placeholder="Search customer or SO number" autocomplete="off"><div id="linkList"></div><button class="btn" id="linkCancel" type="button" style="width:100%;margin-top:8px">Cancel</button></div></div>
 <!-- Editor -->
 <div class="overlay" id="editor" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="edTitle">
@@ -555,11 +584,13 @@ header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
 
       <section class="card kmcard" id="cardKm" hidden></section>
 
+      <section class="card" id="cardMy"><h3>My PODs</h3><div class="hint">Wrong POD? Tap Request change. Admin must approve before you can change it. After admin downloads it, it is locked.</div><div id="myList"></div></section>
+
       <section class="card" id="cardNo">
         <h3><label for="noInput">Invoice number</label></h3>
         <div class="hint" id="noHint">Type just the 7 digits (e.g. 0076830) — “INV” is added automatically. Or attach the invoice below and it is read for you.</div>
         <div class="noField" id="noField"><span class="pfx" aria-hidden="true">INV</span><input id="noInput" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="0000000" aria-describedby="noHelp"></div>
-        <div class="help" id="noHelp"></div>
+        <div class="help" id="noHelp"></div><div class="socheck" id="soCheck"></div>
         <div class="ocr" id="ocrStatus" aria-live="polite"></div>
         <div class="chips" id="ocrChips"></div>
         <label class="autorow" for="autoSw"><span>Read the number from the photo automatically</span><input type="checkbox" id="autoSw"></label>
@@ -1860,7 +1891,7 @@ function applyEditorMode() {
   $('#edClose').hidden = dm; $('#drvOut').hidden = !dm;
   $('#btnPdf').hidden = dm; $('#btnUpload').hidden = !dm;
   $('#btnCancel').textContent = dm ? 'Clear' : 'Cancel';
-  if (dm) { $('#btnSave').hidden = true; $('#btnSaveClose').hidden = true; $('#edTitle').textContent = 'Upload POD' + (session && session.demo ? ' · DEMO' : ''); $('#edChip').hidden = true; }
+  if (dm) { $('#btnSave').hidden = true; $('#btnSaveClose').hidden = true; $('#edTitle').textContent = (typeof dtabTitle === 'function' ? dtabTitle() : 'Upload POD') + (session && session.demo ? ' · DEMO' : ''); $('#edChip').hidden = true; }
   else $('#btnSave').hidden = false;
   $('#podTitle').textContent = dm ? '1. Photo of the signed POD' : 'LPO / POD photo / PDF';
   $('#podHint').textContent = dm ? 'One photo for each page. The page is straightened and shadows are removed for you.' : 'Add as many pages as you need.';
@@ -1939,7 +1970,7 @@ async function syncOutbox() {
     for (const it of items) {
       try {
         await sendItem(it); await Outbox.del(it.id);
-        LS.set(dayKey(), String(sentToday() + 1)); outboxState.pending--; renderOutbox(); toast(it.inv + ' uploaded ✓'); setTimeout(() => { loadTrip(); loadTop(); }, 400);
+        LS.set(dayKey(), String(sentToday() + 1)); outboxState.pending--; renderOutbox(); toast(it.inv + ' uploaded ✓'); setTimeout(() => { loadTrip(); loadTop(); loadMyPods(); }, 400);
       } catch (e) {
         if (e.dup) { await Outbox.del(it.id); outboxState.pending--; renderOutbox(); toast(e.message, true); continue; }
         outboxState.msg = e instanceof NetError ? 'No internet. It uploads by itself when you are back online.' : (e.message || 'Upload failed.');
@@ -1964,6 +1995,7 @@ async function driverUpload() {
   const pages = d.docs.filter(x => x.type === 'image' && !x.busy);
   if (!pages.length) { toast('Take at least one photo first', true); return; }
   const inv = PREFIX + d.no, blobs = [];
+  if (Replace) return replaceFlow(inv, pages);
   await Outbox.open();
   if ((await Outbox.all()).some(i => i.uid === session.uid && i.inv === inv)) { toast(inv + ' is already waiting to upload from this phone', true); return; }
   try {
@@ -1974,6 +2006,7 @@ async function driverUpload() {
   await Outbox.open();
   await Outbox.put({id: uid(), uid: session.uid, inv, createdAt: Date.now(), pages: blobs});
   closeEditor(true);                                   // fresh, empty upload screen
+  setDTab('orders');
   outboxState.pending++; outboxState.msg = 'Uploading…'; renderOutbox(); toast(inv + ' saved. Uploading…');
   syncOutbox();
 }
@@ -1985,7 +2018,7 @@ async function loadInbox() {
   if (Inbox.loading) return;
   Inbox.loading = true; renderInbox();
   try {
-    const res = await api('/rest/v1/pod_uploads?select=id,inv_no,driver_name,pages,file_paths,created_at,downloaded_at&order=created_at.desc&limit=' + Inbox.limit);
+    const res = await api('/rest/v1/pod_uploads?select=id,inv_no,driver_name,pages,file_paths,created_at,downloaded_at,matched,change_status,change_reason&order=created_at.desc&limit=' + Inbox.limit);
     if (!res.ok) throw new Error('Server said ' + res.status);
     Inbox.rows = await res.json(); Inbox.more = Inbox.rows.length >= Inbox.limit; Inbox.err = ''; Inbox.loaded = true;
     const ids = new Set(Inbox.rows.map(r => r.id)); [...Inbox.sel].forEach(i => { if (!ids.has(i)) Inbox.sel.delete(i); });
@@ -1995,7 +2028,7 @@ async function loadInbox() {
 function inboxVisible() {
   const q = Inbox.search.replace(/\D/g, '');
   return Inbox.rows
-    .filter(r => Inbox.tab === 'all' || (Inbox.tab === 'new' ? isNewUpload(r) : !isNewUpload(r)))
+    .filter(r => Inbox.tab === 'all' || (Inbox.tab === 'req' ? r.change_status === 'requested' && !r.downloaded_at : Inbox.tab === 'na' ? r.matched === false : Inbox.tab === 'new' ? isNewUpload(r) : !isNewUpload(r)))
     .filter(r => !q || r.inv_no.includes(q))
     .filter(r => !Inbox.driver || r.driver_name === Inbox.driver);
 }
@@ -2003,8 +2036,8 @@ function irowHtml(r) {
   const isNw = isNewUpload(r);
   return `<li class="rec" data-id="${esc(r.id)}">
     <div><input type="checkbox" data-iact="sel" aria-label="Select ${esc(r.inv_no)}" ${Inbox.sel.has(r.id) ? 'checked' : ''}></div>
-    <div><div class="no">${esc(r.inv_no)} <span class="chip ${isNw ? 'open' : 'closed'}">${isNw ? 'New' : 'Downloaded'}</span></div>
-      <div class="meta">${esc(r.driver_name || 'Driver')} · ${fmtDate(r.created_at)} · ${r.pages} page${r.pages === 1 ? '' : 's'}</div></div>
+    <div><div class="no">${esc(r.inv_no)} <span class="chip ${isNw ? 'open' : 'closed'}">${isNw ? 'New' : 'Downloaded'}</span>${r.matched === false ? ' <span class="chip warnchip">Not assigned</span>' : ''}${r.change_status === 'requested' ? ' <span class="chip warnchip">Change requested</span>' : r.change_status === 'approved' ? ' <span class="chip closed">Change approved</span>' : ''}</div>
+      <div class="meta">${esc(r.driver_name || 'Driver')} · ${fmtDate(r.created_at)} · ${r.pages} page${r.pages === 1 ? '' : 's'}</div>${r.change_status === 'requested' ? `<div class="reason">“${esc(r.change_reason || '')}”</div><div class="reqacts"><button class="btn sm primary" data-iact="appr" type="button">Approve</button><button class="btn sm" data-iact="rej" type="button">Reject</button></div>` : ''}${r.matched === false ? '<div class="reqacts"><button class="btn sm primary" data-iact="link" type="button">Link to order…</button></div>' : ''}</div>
     <div class="acts">
       <button class="btn sm" data-iact="view" type="button">View</button>
       <button class="btn sm" data-iact="pdf" type="button">PDF</button>
@@ -2013,8 +2046,9 @@ function irowHtml(r) {
 }
 function renderInbox() {
   const rows = Inbox.rows, nNew = rows.filter(isNewUpload).length;
-  $('#icnt-new').textContent = nNew; $('#icnt-done').textContent = rows.length - nNew; $('#icnt-all').textContent = rows.length;
-  $('#cnt-inbox').hidden = !nNew; $('#cnt-inbox').textContent = nNew > 99 ? '99+' : nNew;
+  const nReq = rows.filter(r => r.change_status === 'requested' && !r.downloaded_at).length, nNa = rows.filter(r => r.matched === false).length;
+  $('#icnt-new').textContent = nNew; $('#icnt-done').textContent = rows.length - nNew; $('#icnt-all').textContent = rows.length; $('#icnt-req').textContent = nReq; $('#icnt-na').textContent = nNa;
+  const badge = nNew + nReq; $('#cnt-inbox').hidden = !badge; $('#cnt-inbox').textContent = badge > 99 ? '99+' : badge;
   document.querySelectorAll('.itab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.itab === Inbox.tab)));
   const drivers = [...new Set(rows.map(r => r.driver_name).filter(Boolean))].sort(), sel = $('#idriver');
   if (sel.options.length !== drivers.length + 1) {
@@ -2100,6 +2134,8 @@ $('#ilist').addEventListener('click', guard(async e => {
   if (act === 'view') await viewUpload(row);
   else if (act === 'pdf') await pdfUpload(row);
   else if (act === 'del') await deleteUpload(row);
+  else if (act === 'appr' || act === 'rej') { await rpc('admin_resolve_change', {p_id: row.id, p_ok: act === 'appr'}); toast(act === 'appr' ? 'Approved. Driver can change it until you download it' : 'Rejected'); await loadInbox(); }
+  else if (act === 'link') openLinkSheet(row);
 }));
 $('#ilist').addEventListener('change', e => {
   const t = e.target; if (!t.matches('input[data-iact="sel"]')) return;
@@ -2181,7 +2217,7 @@ function startApp() {
     setInterval(() => { if (!document.hidden) syncOutbox(); }, 30000);
     addEventListener('online', () => { syncOutbox(); pingSeen(); });
     pingSeen(); setInterval(pingSeen, 30000);
-    loadKm(); loadTrip(); loadTop(); setInterval(() => { if (!document.hidden) { loadKm(); loadTrip(); loadTop(); } }, 60000);
+    setDTab('orders'); loadMyPods(); loadKm(); loadTrip(); loadTop(); setInterval(() => { if (!document.hidden) { loadKm(); loadTrip(); loadTop(); } }, 60000);
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
@@ -2261,7 +2297,7 @@ const kchip = r => { const s = stOf(r); return `<span class="k ${s.k}">${s.t}</s
 const bucketOf = r => r.status === 'returned' ? (r.hub_received_at ? 'closed' : 'returned') : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
-  returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', undo: () => 'Undone'};
+  returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone'};
 const evTime = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'), hm = p(d.getHours()) + ':' + p(d.getMinutes()); return dateKey(d) === dateKey() ? hm : d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + hm; };
 function stackBar(list) {
   const n = list.length || 1, c = f => list.filter(f).length;
@@ -2270,7 +2306,7 @@ function stackBar(list) {
 }
 async function rpc(name, args) {
   const res = await api('/rest/v1/rpc/' + name, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(args)});
-  if (!res.ok) throw new Error('Server refused (' + res.status + ')');
+  if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { const j = await res.json(); if (j.message) m = j.message; } catch (e) {} throw new Error(m); }
 }
 const netMsg = x => x instanceof NetError ? 'Needs internet. Try again.' : (x.message || 'Failed');
 
@@ -2284,7 +2320,7 @@ async function loadTrip() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     Trip.rows = await res.json(); Trip.loaded = true; LS.set('pod.trip.' + session.uid, JSON.stringify(Trip.rows));
   } catch (e) { if (!Trip.loaded) { try { Trip.rows = JSON.parse(LS.get('pod.trip.' + session.uid) || '[]'); } catch (x) { Trip.rows = []; } } }
-  renderTrip();
+  renderTrip(); navBadges();
 }
 const ORDER = {assigned: 0, out: 1, pod_pending: 2, handed_over: 3, returned: 3, complete: 4};
 function tripVisible() { const today = dateKey(); return Trip.rows.filter(r => r.work_date === today || ['assigned', 'out', 'pod_pending'].includes(r.status)).sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9)); }
@@ -2320,7 +2356,7 @@ function openTripSheet(kind, row) {
 async function afterDeliveredPrompt(row) {
   if (row.so_no && typeof applyNumber === 'function') applyNumber(row.so_no.replace(/\D/g, '').slice(-NUM_LEN));
   else toast('Take the photo, then type the SO number');
-  const c = $('#cardPod'); if (c && c.scrollIntoView) c.scrollIntoView({behavior: 'smooth', block: 'start'});
+  setDTab('upload'); updateSoCheck();
 }
 document.addEventListener('click', async e => {
   const rb = e.target.closest('[data-reason]');
@@ -2500,6 +2536,28 @@ function renderTop(list) {
   const c = $('#cardTop'); if (c) c.hidden = false;
 }
 
+/* ---- admin: link a "not assigned" POD to an order ---- */
+const Link = {pod: null, rows: []};
+async function openLinkSheet(pod) {
+  Link.pod = pod; $('#linkTitle').textContent = 'Link ' + pod.inv_no + ' to an order'; $('#linkQ').value = ''; $('#linkList').innerHTML = '<div class="m">Loading…</div>'; $('#linkSheet').hidden = false;
+  try {
+    const res = await api('/rest/v1/assignments?select=id,so_no,customer,status,driver_name&status=in.(unassigned,assigned,out,pod_pending)&order=customer.asc&limit=500'); if (!res.ok) throw 0;
+    Link.rows = await res.json(); renderLink();
+  } catch (e) { $('#linkList').innerHTML = '<div class="m">Could not load orders.</div>'; }
+}
+function renderLink() {
+  const q = ($('#linkQ').value || '').trim().toLowerCase(), v = Link.rows.filter(r => !q || [r.customer, r.so_no].some(x => (x || '').toLowerCase().includes(q))).slice(0, 40);
+  $('#linkList').innerHTML = v.length ? v.map(r => `<button type="button" class="dr" data-link="${r.id}"><b>${esc(r.customer || r.so_no)}</b><small>${esc(r.so_no)} · ${esc(stOf(r).t)}${r.driver_name ? ' · ' + esc(r.driver_name) : ''}</small></button>`).join('') : '<div class="m">No open orders match.</div>';
+}
+document.addEventListener('input', e => { if (e.target.id === 'linkQ') renderLink(); });
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-link]');
+  try {
+    if (e.target.id === 'linkCancel' || e.target.id === 'linkSheet') $('#linkSheet').hidden = true;
+    else if (b && Link.pod) { await rpc('admin_link_pod', {p_pod: Link.pod.id, p_order: b.dataset.link}); $('#linkSheet').hidden = true; toast('Linked ✓'); await loadInbox(); }
+  } catch (x) { toast(x.message && !(x instanceof NetError) ? x.message : netMsg(x), true); }
+});
+
 /* =============== kilometres (per-driver switch) =============== */
 async function kmRpc(name, args) {
   const res = await api('/rest/v1/rpc/' + name, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(args)});
@@ -2595,6 +2653,8 @@ document.addEventListener('click', async e => {
     else if (t.id === 'kmeOk' && KmA.edit) { const s = parseInt($('#kmeStart').value, 10), en = $('#kmeEnd').value === '' ? null : parseInt($('#kmeEnd').value, 10);
       if (!(s >= 0)) { toast('Enter start km', true); return; }
       await kmRpc('admin_km_fix', {p_id: KmA.edit.id, p_start: s, p_end: en}); $('#kmSheet').hidden = true; toast('Saved ✓'); await loadKmReport(); }
+    else if (t.id === 'kmeDel' && KmA.edit) { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Tap again to delete for good'; setTimeout(() => { t.dataset.armed = ''; t.textContent = 'Delete entry'; }, 4000); return; }
+      t.dataset.armed = ''; t.textContent = 'Delete entry'; await kmRpc('admin_km_delete', {p_id: KmA.edit.id}); $('#kmSheet').hidden = true; toast('Entry deleted'); await loadKmReport(); }
     else if (t.id === 'kmCsv') kmCsv();
     else if (t.dataset && t.dataset.kmr) { const n = new Date(), f = x => dateKey(x), m = t.dataset.kmr;
       if (m === 'week') { $('#kmFrom').value = f(new Date(Date.now() - 6 * 86400000)); $('#kmTo').value = f(new Date()); }
@@ -2610,6 +2670,114 @@ function kmCsv() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv'})); a.download = 'Driver_km_' + $('#kmFrom').value + '_to_' + $('#kmTo').value + '.csv'; document.body.appendChild(a); a.click(); a.remove();
 }
 document.addEventListener('change', e => { if (e.target.id === 'kmFrom' || e.target.id === 'kmTo') loadKmReport(); });
+
+/* =============== driver tabs, My PODs, change requests =============== */
+const DTAB_TITLE = {orders: 'Orders', upload: 'Upload POD', mypods: 'My PODs', top: 'Top drivers'};
+let Dtab = 'orders';
+const dtabTitle = () => DTAB_TITLE[Dtab] || 'Upload POD';
+function setDTab(t) {
+  Dtab = t; document.body.dataset.dtab = t;
+  document.querySelectorAll('#dnav [data-dtab]').forEach(b => b.classList.toggle('on', b.dataset.dtab === t));
+  if (App.role === 'driver') $('#edTitle').textContent = dtabTitle();
+  const body = document.querySelector('#editor .body'); if (body) body.scrollTop = 0; window.scrollTo(0, 0);
+  if (t === 'mypods') loadMyPods(); if (t === 'top') loadTop(); if (t === 'orders') { loadTrip(); loadKm(); }
+}
+document.addEventListener('click', e => { const b = e.target.closest('#dnav [data-dtab]'); if (b) setDTab(b.dataset.dtab); });
+function navBadges() {
+  const n = typeof Trip !== 'undefined' ? Trip.rows.filter(r => r.status === 'assigned' && r.work_date === dateKey()).length : 0;
+  const o = $('#dnOrd'); if (o) { o.hidden = !n; o.textContent = n; }
+  const m = Mine.rows.filter(r => r.change_status === 'approved' && !r.downloaded_at).length, my = $('#dnMy'); if (my) { my.hidden = !m; my.textContent = m; }
+}
+
+/* ---- SO number check under the input ---- */
+function updateSoCheck() {
+  const el = $('#soCheck'); if (!el || App.role !== 'driver') return;
+  const d = ($('#noInput').value || '').replace(/\D/g, '');
+  if (d.length !== NUM_LEN) { el.className = 'socheck'; el.textContent = ''; return; }
+  const so = 'SO-' + d, mine = Mine.rows.find(r => r.inv_no === so), row = Trip.rows.find(r => r.so_no === so);
+  if (Replace && Replace.inv === so) { el.className = 'socheck ok'; el.textContent = '✓ Replacing this POD'; }
+  else if (mine) { el.className = 'socheck wn'; el.textContent = '⚠ ' + so + ' is already uploaded. See My PODs.'; }
+  else if (row) { el.className = 'socheck ok'; el.textContent = '✓ ' + (row.customer || so) + ' · in your list'; }
+  else { el.className = 'socheck wn'; el.textContent = '⚠ This SO is not in your list. Check the number. If it is really yours you can still upload; admin will see it as Not assigned.'; }
+}
+document.addEventListener('input', e => { if (e.target.id === 'noInput') setTimeout(updateSoCheck, 0); });
+
+/* ---- My PODs list ---- */
+const Mine = {rows: [], loaded: false, sheet: null};
+let Replace = null;
+async function loadMyPods() {
+  if (!session || App.role !== 'driver' || session.demo) return;
+  try {
+    const res = await api('/rest/v1/pod_uploads?select=id,inv_no,pages,created_at,downloaded_at,change_status,change_reason,matched&driver_id=eq.' + session.uid + '&order=created_at.desc&limit=40');
+    if (!res.ok) throw 0; Mine.rows = await res.json(); Mine.loaded = true; LS.set('pod.mine.' + session.uid, JSON.stringify(Mine.rows));
+  } catch (e) { if (!Mine.loaded) { try { Mine.rows = JSON.parse(LS.get('pod.mine.' + session.uid) || '[]'); } catch (x) { Mine.rows = []; } } }
+  renderMyPods(); navBadges();
+}
+function myCard(r) {
+  const row = Trip.rows.find(x => x.so_no === r.inv_no), t = new Date(r.created_at), p = n => String(n).padStart(2, '0');
+  const when = dateKey(t) === dateKey() ? p(t.getHours()) + ':' + p(t.getMinutes()) : t.toLocaleDateString([], {day: 'numeric', month: 'short'});
+  let chip, acts = '', cls = '';
+  if (r.downloaded_at) { chip = '<span class="k un">🔒 Locked · admin downloaded</span>'; cls = 'lock'; }
+  else if (r.change_status === 'requested') chip = '<span class="k pp">Change requested · waiting for admin</span>';
+  else if (r.change_status === 'approved') { chip = '<span class="k dl">Admin approved · you can change</span>'; cls = 'appr'; acts = `<div class="two"><button class="btn brassbtn" data-my="replace" data-id="${r.id}" type="button">Replace photo</button><button class="btn" data-my="chg" data-id="${r.id}" type="button">Change SO no.</button></div>`; }
+  else if (r.change_status === 'rejected') { chip = '<span class="k rt">Request rejected</span>'; acts = `<button class="linkbtn" data-my="req" data-id="${r.id}" type="button">Ask again</button>`; }
+  else { chip = '<span class="k un">Sent to admin</span>'; acts = `<button class="btn" style="margin-top:10px;min-height:42px" data-my="req" data-id="${r.id}" type="button">Request change</button>`; }
+  return `<div class="cc myc ${cls}"><div class="t">${esc(r.inv_no)}</div><div class="m">${esc(row ? row.customer || '' : 'Not in your orders')} · ${r.pages} page${r.pages === 1 ? '' : 's'} · ${when}</div><div style="margin-top:8px">${chip}</div>${acts}</div>`;
+}
+function renderMyPods() {
+  const el = $('#myList'); if (!el) return;
+  el.innerHTML = Mine.rows.length ? Mine.rows.map(myCard).join('') : '<div class="m">No PODs uploaded yet.</div>';
+  updateSoCheck();
+}
+const REQ_REASONS = ['Wrong SO number', 'Blurry photo', 'Missing page', 'Other'];
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-my]'), id = e.target.id;
+  try {
+    if (b) {
+      const row = Mine.rows.find(r => r.id === b.dataset.id); if (!row) return;
+      if (b.dataset.my === 'req') { Mine.sheet = {row, reason: REQ_REASONS[0]}; $('#reqTitle').textContent = 'Why change ' + row.inv_no + '?';
+        $('#reqReasons').innerHTML = REQ_REASONS.map((x, i) => `<button type="button" class="${i ? '' : 'on'}" data-rq="${x}">${x}</button>`).join(''); $('#reqNote').value = ''; $('#reqSheet').hidden = false; }
+      else if (b.dataset.my === 'replace') { Replace = {id: row.id, inv: row.inv_no}; startReplaceBanner(); setDTab('upload'); if (typeof applyNumber === 'function') applyNumber(row.inv_no.replace(/\D/g, '').slice(-NUM_LEN)); }
+      else if (b.dataset.my === 'chg') { Mine.sheet = {row}; $('#chgTitle').textContent = 'Change SO number'; $('#chgIn').value = row.inv_no.replace(/\D/g, '').slice(-NUM_LEN); $('#chgInfo').textContent = ''; $('#chgSheet').hidden = false; chgCheck(); }
+      return;
+    }
+    const rq = e.target.closest('[data-rq]');
+    if (rq && Mine.sheet) { Mine.sheet.reason = rq.dataset.rq; document.querySelectorAll('#reqReasons button').forEach(x => x.classList.toggle('on', x === rq)); return; }
+    if (id === 'reqCancel') $('#reqSheet').hidden = true;
+    else if (id === 'reqOk' && Mine.sheet) { const n = ($('#reqNote').value || '').trim(); await rpc('driver_request_change', {p_id: Mine.sheet.row.id, p_reason: Mine.sheet.reason + (n ? ' - ' + n : '')}); $('#reqSheet').hidden = true; toast('Request sent to admin ✓'); await loadMyPods(); }
+    else if (id === 'chgCancel') $('#chgSheet').hidden = true;
+    else if (id === 'chgOk' && Mine.sheet) { const d = ($('#chgIn').value || '').replace(/\D/g, ''); if (d.length !== NUM_LEN) { toast('Enter exactly 7 digits', true); return; }
+      await rpc('driver_replace_pod', {p_id: Mine.sheet.row.id, p_inv: 'SO-' + d, p_pages: null, p_paths: null}); $('#chgSheet').hidden = true; toast('SO number changed ✓'); await loadMyPods(); loadTrip(); }
+    else if (id === 'repCancel') { Replace = null; startReplaceBanner(); updateSoCheck(); }
+  } catch (x) { toast(x.message && !(x instanceof NetError) ? x.message : netMsg(x), true); }
+});
+document.addEventListener('input', e => { if (e.target.id === 'chgIn') chgCheck(); });
+function chgCheck() {
+  const d = ($('#chgIn').value || '').replace(/\D/g, ''), el = $('#chgInfo'); if (d.length !== NUM_LEN) { el.textContent = ''; return; }
+  const row = Trip.rows.find(r => r.so_no === 'SO-' + d); el.className = 'socheck ' + (row ? 'ok' : 'wn'); el.textContent = row ? '✓ ' + (row.customer || '') + ' · in your list' : '⚠ Not in your list';
+}
+function startReplaceBanner() {
+  let b = $('#repBanner'); const card = $('#cardPod'); if (!card) return;
+  if (!Replace) { if (b) b.remove(); $('#btnUpload').textContent = 'Upload POD'; return; }
+  if (!b) { b = document.createElement('div'); b.id = 'repBanner'; b.className = 'note'; card.parentNode.insertBefore(b, card); }
+  b.innerHTML = `Replacing the POD of <b>${esc(Replace.inv)}</b>. Take the new photos, then tap Replace. <button class="linkbtn" id="repCancel" type="button">Cancel</button>`;
+  $('#btnUpload').textContent = 'Replace POD';
+}
+async function replaceFlow(inv, pages) {
+  const R = Replace, id = uid(), blobs = [];
+  try {
+    await withBusy('Replacing…', async () => {
+      for (const p of pages) blobs.push(await shrinkForUpload(p.blob));
+      const paths = blobs.map((_, i) => `${session.uid}/${id}_${i + 1}.jpg`);
+      for (let i = 0; i < blobs.length; i++) {
+        const res = await api('/storage/v1/object/pods/' + paths[i], {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'x-upsert': 'false'}, body: blobs[i]});
+        if (!res.ok) throw new Error('Server refused the photo (' + res.status + ')');
+      }
+      await rpc('driver_replace_pod', {p_id: R.id, p_inv: inv, p_pages: blobs.length, p_paths: paths});
+    });
+  } catch (x) { toast(x.message && !(x instanceof NetError) ? x.message : netMsg(x), true); return; }
+  Replace = null; startReplaceBanner(); closeEditor(true); setDTab('mypods'); toast(inv + ' replaced ✓'); loadTrip(); loadTop();
+}
 /* =====================================================================
    Boot
    ===================================================================== */
