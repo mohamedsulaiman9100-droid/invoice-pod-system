@@ -364,6 +364,8 @@ ul#ordList{list-style:none;margin:0;padding:0 0 90px}
 .top .rk{font-size:20px;text-align:center;font-weight:700}.top .bar{height:8px;border-radius:9px;background:var(--line);overflow:hidden}
 .top .bar i{display:block;height:100%;background:var(--brass);border-radius:9px}.top em{font-style:normal;font-weight:700;text-align:right}
 .top b small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.addmore{display:grid;grid-template-columns:1.4fr 1fr;gap:8px;margin-top:4px}.addmore .btn{min-height:50px}
+body.driver [data-act="scan"]{display:none!important}
 </style>
 </head>
 <body class="booting">
@@ -1382,6 +1384,11 @@ function renderDocs() {
   for (const k of ['invoice', 'pod']) {
     const list = d.docs.filter(x => x.kind === k);
     $('#docs-' + k).innerHTML = list.length ? list.map(docCardHtml).join('') : '<div class="sub">Nothing attached yet.</div>';
+    if (k === 'pod' && App.role === 'driver') {
+      const pn = list.reduce((s, x) => s + (x.pages || 1), 0);
+      $('#podTitle').textContent = '1. Photos of the signed POD' + (pn ? ' · ' + pn + (pn === 1 ? ' page' : ' pages') : '');
+      if (list.length) $('#docs-pod').insertAdjacentHTML('beforeend', '<div class="addmore"><button class="btn primary" data-act="cam" data-kind="pod" type="button">➕ Add another page</button><button class="btn" data-act="up" data-kind="pod" type="button">🖼 From gallery</button></div>');
+    }
   }
 }
 
