@@ -381,6 +381,9 @@ header.top .hdr-actions .btn{padding:8px 11px;min-height:40px;font-size:14px;whi
 header.top .sub{font-size:12px}
 header.top h1{font-size:12px}header.top .hdr-actions{gap:6px}header.top .hdr-actions .btn{padding:8px 9px;font-size:13.5px}
 header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
+.selall{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;margin:0 0 8px;border-radius:12px;border:1px dashed var(--line);background:transparent;color:var(--ink);cursor:pointer;text-align:left}
+.selall .rb{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:inline-block;flex:none}
+.selall .rb.on{border-color:var(--accent);background:radial-gradient(var(--accent) 48%,transparent 52%)}
 </style>
 </head>
 <body class="booting">
@@ -449,8 +452,9 @@ header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
   <div class="otools">
     <input type="date" id="tripDate" aria-label="Date">
     <select id="ordDrv" aria-label="Driver"><option value="">All drivers</option></select>
-    <div class="search"><input id="ordQ" type="search" placeholder="Search customer, SO or invoice" aria-label="Search orders"></div>
+    <div class="search"><input id="ordQ" type="search" placeholder="Search customer or SO number" aria-label="Search orders"></div>
   </div>
+  <button type="button" class="selall" id="ordAll" hidden><span class="rb" id="ordAllBox"></span><b id="ordAllTxt">Select all</b></button>
   <ul id="ordList" aria-live="polite"></ul>
   <div class="ordbar" id="ordBar" hidden><b id="ordSel">0 selected</b><span class="grow"></span><button class="btn" id="ordUnasg" type="button" hidden>Unassign</button><button class="btn danger" id="ordDel" type="button">Delete</button><button class="btn brass" id="ordAsg" type="button">Assign driver</button></div>
  </div>
@@ -1899,6 +1903,10 @@ async function sendItem(it) {
     it.done[i] = true; await Outbox.put(it);
   }
   const res = await api('/rest/v1/pod_uploads', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'return=minimal'}, body: JSON.stringify({id: it.id, inv_no: it.inv, pages: it.pages.length, file_paths: paths})});
+  if (res.status === 409) {                                  // same id = our own retry (fine); a different row owns this SO = duplicate
+    const chk = await api('/rest/v1/rpc/pod_mine', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({p_id: it.id})});
+    if (chk.ok && (await chk.json()) === false) { const er = new Error(it.inv + ' already has a POD. This upload was dropped.'); er.dup = true; throw er; }
+  }
   if (!res.ok && res.status !== 409) throw new Error(res.status === 401 || res.status === 403 ? 'This login is not allowed to upload. Ask your admin.' : 'Server refused the POD (' + res.status + ').');
 }
 let syncing = false;
@@ -1915,6 +1923,7 @@ async function syncOutbox() {
         await sendItem(it); await Outbox.del(it.id);
         LS.set(dayKey(), String(sentToday() + 1)); outboxState.pending--; renderOutbox(); toast(it.inv + ' uploaded ✓'); setTimeout(() => { loadTrip(); loadTop(); }, 400);
       } catch (e) {
+        if (e.dup) { await Outbox.del(it.id); outboxState.pending--; renderOutbox(); toast(e.message, true); continue; }
         outboxState.msg = e instanceof NetError ? 'No internet. It uploads by itself when you are back online.' : (e.message || 'Upload failed.');
         break;
       }
@@ -1937,6 +1946,12 @@ async function driverUpload() {
   const pages = d.docs.filter(x => x.type === 'image' && !x.busy);
   if (!pages.length) { toast('Take at least one photo first', true); return; }
   const inv = PREFIX + d.no, blobs = [];
+  await Outbox.open();
+  if ((await Outbox.all()).some(i => i.uid === session.uid && i.inv === inv)) { toast(inv + ' is already waiting to upload from this phone', true); return; }
+  try {
+    const r = await api('/rest/v1/rpc/pod_exists', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({p_inv: inv})});
+    if (r.ok && (await r.json()) === true) { toast(inv + ' already has a POD uploaded. Check the number, or ask your admin.', true); $('#noInput').focus(); return; }
+  } catch (e) { /* offline: the server still blocks duplicates when it syncs */ }
   await withBusy('Preparing photos…', async () => { for (const p of pages) blobs.push(await shrinkForUpload(p.blob)); });
   await Outbox.open();
   await Outbox.put({id: uid(), uid: session.uid, inv, createdAt: Date.now(), pages: blobs});
@@ -2350,6 +2365,8 @@ function renderOrders() {
     return `<li class="ord" data-id="${r.id}">${selectable ? `<button class="rb ${Ord.sel.has(r.id) ? 'on' : ''}" data-osel="${r.id}" type="button" aria-label="Select"></button>` : '<span></span>'}`
       + `<div><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>${kchip(r)}</li>`;
   }).join('') : `<li class="empty">${Ord.rows.length ? 'No orders in this group.' : 'No orders for this date. Tap Upload Excel.'}</li>`;
+  const allB = $('#ordAll'), on = vis.length && vis.every(r => Ord.sel.has(r.id));
+  allB.hidden = !vis.length; $('#ordAllBox').classList.toggle('on', !!on); $('#ordAllTxt').textContent = (on ? 'Clear selection' : 'Select all') + ' (' + vis.length + ')';
   const n = Ord.sel.size; $('#ordBar').hidden = !n; $('#ordSel').textContent = n + ' selected';
   const st = [...Ord.sel].map(id => (Ord.rows.find(r => r.id === id) || {}).status), canAsg = n && st.every(s => ['unassigned', 'assigned'].includes(s)); $('#ordUnasg').hidden = !(n && st.every(s => s === 'assigned')); $('#ordAsg').hidden = !canAsg;
 }
@@ -2418,7 +2435,8 @@ document.addEventListener('click', async e => {
     if (t.id === 'ordDel') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Tap again: delete ' + Ord.sel.size; setTimeout(() => { t.dataset.armed = ''; t.textContent = 'Delete'; }, 4000); return; }
       t.dataset.armed = ''; t.textContent = 'Delete'; await delOrders([...Ord.sel]); return; }
     const pipe = t.closest('[data-pipe]'), sel = t.closest('[data-osel]'), row = t.closest('li.ord'), dr = t.closest('[data-drv]'), hub = t.closest('[data-hubrec]');
-    if (t.id === 'btnTripUpload') $('#tripFile').click();
+    if (t.closest('#ordAll')) { const v = ordShown(), on = v.length && v.every(r => Ord.sel.has(r.id)); v.forEach(r => on ? Ord.sel.delete(r.id) : Ord.sel.add(r.id)); renderOrders(); }
+    else if (t.id === 'btnTripUpload') $('#tripFile').click();
     else if (t.id === 'tripGo') await tripAssign();
     else if (t.id === 'tripNo') { Ord.parsed = null; renderTripPreview(); }
     else if (pipe) { Ord.f = pipe.dataset.pipe; renderOrders(); }
