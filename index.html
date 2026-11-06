@@ -392,6 +392,8 @@ header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
 .kmv{text-align:right;font-weight:700;white-space:nowrap}.kmv small{display:block;color:var(--muted);font-weight:500}
 .tgl{border:1.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:99px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}.tgl.on{background:var(--closed-bg);color:var(--closed);border-color:transparent}
 .drv .tgl{margin-left:auto;flex:none}.kmrow .m{font-size:12px}
+.kmrange{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.kmrange input{flex:1;min-width:130px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:40px}
+#kmTypes{margin-top:6px}#kmTypes button{flex:1;min-width:70px;min-height:46px;font-size:15px}
 </style>
 </head>
 <body class="booting">
@@ -448,7 +450,7 @@ header.top h1{white-space:nowrap}header.top .sub{max-width:150px}
   <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
   <section class="card" style="margin-bottom:12px"><h3>🏆 Top drivers this week</h3><div class="hint">Orders completed with POD, since Monday</div><div class="topList"></div></section>
   <ul class="list" id="drvList" aria-live="polite"></ul>
-  <section class="card" id="kmBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Kilometres</h3><button class="btn sm" id="kmCsv" type="button">Export CSV</button></div><div class="kmtot"></div><div class="kmrows"></div></section>
+  <section class="card" id="kmBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Kilometres</h3><button class="btn sm" id="kmCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-kmr="week" type="button">7 days</button><button class="btn sm" data-kmr="month" type="button">This month</button><button class="btn sm" data-kmr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="kmFrom" aria-label="From"><input type="date" id="kmTo" aria-label="To"></div><div class="kmtot"></div><div class="kmrows"></div></section>
  </div>
  <div id="viewOrders" hidden>
   <div id="tripMsg" class="banner" hidden></div>
@@ -2504,7 +2506,9 @@ async function kmRpc(name, args) {
   if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { m = (await res.json()).message || m; } catch (e) {} throw new Error(m); }
 }
 const fmtKm = n => Number(n).toLocaleString('en-US');
-const Km = {on: false, days: [], vehicle: '', endOpen: false};
+const Km = {on: false, days: [], vehicle: '', vtype: '', endOpen: false};
+const VTYPES = ['Hiace', 'Car', '3 Ton', 'Other'];
+const guessType = s => { s = (s || '').toLowerCase(); return /hiace/.test(s) ? 'Hiace' : /3\s*-?\s*t(on)?\b|3ton/.test(s) ? '3 Ton' : /\bcar\b/.test(s) ? 'Car' : ''; };
 async function loadKm() {
   if (!session || App.role !== 'driver' || session.demo) return;
   try {
@@ -2528,20 +2532,23 @@ function renderKm() {
   const st = kmState(); c.hidden = st === 'off'; if (st === 'off') return;
   const open = Km.days.find(d => !d.ended_at), last = Km.days.find(d => d.ended_at) || Km.days[0];
   const veh = (open && open.vehicle) || Km.vehicle || (last && last.vehicle) || (Trip.rows.find(r => r.vehicle) || {}).vehicle || '';
+  const vt = Km.vtype || (open && open.vehicle_type) || (last && last.vehicle_type) || guessType(veh) || '';
   const keep = document.activeElement && document.activeElement.id === 'kmIn' ? $('#kmIn').value : '';
-  if (st === 'need_start') c.innerHTML = `<h3>Start your day</h3><div class="hint">Enter the odometer reading before you pick orders.</div><label class="kmf">Odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="0" placeholder="e.g. 45210" value="${keep}"></label><label class="kmf">Vehicle<input id="kmVeh" type="text" placeholder="e.g. HIACE (W-37223)" value="${esc(veh)}"></label><button class="btn primary main" id="kmStart" type="button">Start day</button>`;
+  if (st === 'need_start') c.innerHTML = `<h3>Start your day</h3><div class="hint">Enter the odometer reading before you pick orders.</div><label class="kmf">Odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="0" placeholder="e.g. 45210" value="${keep}"></label><div class="kmf">Vehicle type</div><div class="rs" id="kmTypes">${VTYPES.map(x => `<button type="button" class="${x === vt ? 'on' : ''}" data-vt="${x}">${x}</button>`).join('')}</div><label class="kmf" style="margin-top:4px">Vehicle number<input id="kmVeh" type="text" placeholder="e.g. W-37223" value="${esc(veh)}"></label><button class="btn primary main" id="kmStart" type="button">Start day</button>`;
   else if (st === 'stale') c.innerHTML = `<h3>Close ${esc(open.day)} first</h3><div class="hint">Enter the end km of that day to continue. Started at ${fmtKm(open.start_km)} km.</div><label class="kmf">End odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="0" value="${keep}"></label><button class="btn primary main" id="kmEnd" type="button">Close day</button>`;
-  else if (st === 'open') c.innerHTML = `<div class="kmbar"><div><b>🚚 Day started · ${fmtKm(open.start_km)} km</b><div class="m">${esc(open.vehicle || '')}</div></div>${Km.endOpen ? '' : '<button class="btn" id="kmAsk" type="button">End day</button>'}</div>${Km.endOpen ? `<label class="kmf">End odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="${open.start_km}" value="${keep}"></label><div class="two"><button class="btn primary" id="kmEnd" type="button">Close day</button><button class="btn" id="kmCancel" type="button">Cancel</button></div>` : ''}`;
+  else if (st === 'open') c.innerHTML = `<div class="kmbar"><div><b>🚚 ${esc(open.vehicle_type || 'Day')} · ${fmtKm(open.start_km)} km</b><div class="m">${esc(open.vehicle || 'Day started')}</div></div>${Km.endOpen ? '' : '<button class="btn" id="kmAsk" type="button">End day</button>'}</div>${Km.endOpen ? `<label class="kmf">End odometer (km)<input id="kmIn" type="number" inputmode="numeric" min="${open.start_km}" value="${keep}"></label><div class="two"><button class="btn primary" id="kmEnd" type="button">Close day</button><button class="btn" id="kmCancel" type="button">Cancel</button></div>` : ''}`;
   else { const d = Km.days.find(x => x.day === dateKey()); c.innerHTML = `<div class="kmbar"><div><b>✓ Day closed · ${fmtKm(d.end_km - d.start_km)} km</b><div class="m">${fmtKm(d.start_km)} → ${fmtKm(d.end_km)} km</div></div></div>`; }
 }
 document.addEventListener('click', async e => {
   const id = e.target.id;
+  const vb = e.target.closest('[data-vt]');
+  if (vb) { Km.vtype = vb.dataset.vt; document.querySelectorAll('#kmTypes button').forEach(b => b.classList.toggle('on', b === vb)); return; }
   if (!['kmStart', 'kmEnd', 'kmAsk', 'kmCancel'].includes(id)) return;
   try {
     if (id === 'kmAsk') { Km.endOpen = true; renderKm(); $('#kmIn').focus(); return; }
     if (id === 'kmCancel') { Km.endOpen = false; renderKm(); return; }
     const v = parseInt($('#kmIn').value, 10); if (!(v >= 0)) { toast('Enter the odometer reading', true); return; }
-    if (id === 'kmStart') { Km.vehicle = ($('#kmVeh').value || '').trim(); await kmRpc('km_start', {p_km: v, p_vehicle: Km.vehicle}); toast('Day started ✓'); }
+    if (id === 'kmStart') { Km.vehicle = ($('#kmVeh').value || '').trim(); const ty = Km.vtype || guessType(Km.vehicle) || (Km.days[0] || {}).vehicle_type; if (!ty) { toast('Choose the vehicle type', true); return; } await kmRpc('km_start', {p_km: v, p_vehicle: Km.vehicle, p_type: ty}); toast('Day started ✓'); }
     else { await kmRpc('km_end', {p_km: v}); Km.endOpen = false; toast('Day closed ✓'); }
     await loadKm();
   } catch (x) { toast(netMsg(x), true); }
@@ -2551,9 +2558,10 @@ document.addEventListener('click', async e => {
 const KmA = {rows: [], edit: null};
 async function loadKmReport() {
   const box = $('#kmBox'); if (!box || !session || session.demo) return;
-  const from = dateKey(new Date(Date.now() - 6 * 86400000));
+  const fi = $('#kmFrom'), ti = $('#kmTo');
+  if (!fi.value) { const n = new Date(); fi.value = dateKey(new Date(n.getFullYear(), n.getMonth(), 1)); ti.value = dateKey(); }
   try {
-    const r = await api('/rest/v1/km_days?select=*&day=gte.' + from + '&order=day.desc,driver_name.asc'); if (!r.ok) throw 0;
+    const r = await api('/rest/v1/km_days?select=*&day=gte.' + fi.value + '&day=lte.' + ti.value + '&order=day.desc,driver_name.asc&limit=1000'); if (!r.ok) throw 0;
     KmA.rows = await r.json(); renderKmReport();
   } catch (e) { box.hidden = true; }
 }
@@ -2568,10 +2576,12 @@ function renderKmReport() {
   const tracked = (window.__kmDrivers || []).length;
   box.hidden = !tracked && !rows.length;
   const flags = kmFlags(rows), tot = {};
-  rows.forEach(r => { if (r.end_km != null) tot[r.driver_name] = (tot[r.driver_name] || 0) + r.end_km - r.start_km; });
-  const totals = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([n, k]) => `<span class="k un">${esc(n)}: ${fmtKm(k)} km</span>`).join(' ');
-  box.querySelector('.kmrows').innerHTML = rows.length ? rows.map(r => `<div class="kmrow" data-kmedit="${r.id}"><div><b>${esc(r.driver_name || '')}</b> <span class="m">${esc(r.day)}${r.vehicle ? ' · ' + esc(r.vehicle) : ''}</span>${flags[r.id] ? `<div class="warn">⚠ ${esc(flags[r.id])}</div>` : ''}</div><div class="kmv">${fmtKm(r.start_km)} → ${r.end_km != null ? fmtKm(r.end_km) : '…'}<small>${r.end_km != null ? fmtKm(r.end_km - r.start_km) + ' km' : 'day open'}</small></div></div>`).join('') : '<div class="m">No km entries in the last 7 days.</div>';
-  box.querySelector('.kmtot').innerHTML = totals ? '<div class="m" style="margin:6px 0">Last 7 days:</div>' + totals : '';
+  const dys = {}; rows.forEach(r => { if (r.end_km != null) { tot[r.driver_name] = (tot[r.driver_name] || 0) + r.end_km - r.start_km; dys[r.driver_name] = (dys[r.driver_name] || 0) + 1; } });
+  const totals = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([n, k]) => `<span class="k un">${esc(n)}: ${fmtKm(k)} km · ${dys[n]} day${dys[n] > 1 ? 's' : ''}</span>`).join(' ');
+  const vt = {}; rows.forEach(r => { if (r.end_km != null) vt[r.vehicle_type || 'Not set'] = (vt[r.vehicle_type || 'Not set'] || 0) + r.end_km - r.start_km; });
+  const vtHtml = Object.keys(vt).length ? '<div class="m" style="margin:10px 0 6px">By vehicle type:</div>' + Object.entries(vt).sort((a, b) => b[1] - a[1]).map(([n, k2]) => `<span class="k as">${esc(n)}: ${fmtKm(k2)} km</span>`).join(' ') : '';
+  box.querySelector('.kmrows').innerHTML = rows.length ? rows.map(r => `<div class="kmrow" data-kmedit="${r.id}"><div><b>${esc(r.driver_name || '')}</b> <span class="m">${esc(r.day)} · ${esc([r.vehicle_type, r.vehicle].filter(Boolean).join(' '))}</span>${flags[r.id] ? `<div class="warn">⚠ ${esc(flags[r.id])}</div>` : ''}</div><div class="kmv">${fmtKm(r.start_km)} → ${r.end_km != null ? fmtKm(r.end_km) : '…'}<small>${r.end_km != null ? fmtKm(r.end_km - r.start_km) + ' km' : 'day open'}</small></div></div>`).join('') : '<div class="m">No km entries in this period.</div>';
+  box.querySelector('.kmtot').innerHTML = (totals ? '<div class="m" style="margin:6px 0">Total for this period:</div>' + totals : '') + vtHtml;
 }
 function openKmEdit(id) {
   const r = KmA.rows.find(x => x.id === id); if (!r) return; KmA.edit = r;
@@ -2586,14 +2596,20 @@ document.addEventListener('click', async e => {
       if (!(s >= 0)) { toast('Enter start km', true); return; }
       await kmRpc('admin_km_fix', {p_id: KmA.edit.id, p_start: s, p_end: en}); $('#kmSheet').hidden = true; toast('Saved ✓'); await loadKmReport(); }
     else if (t.id === 'kmCsv') kmCsv();
+    else if (t.dataset && t.dataset.kmr) { const n = new Date(), f = x => dateKey(x), m = t.dataset.kmr;
+      if (m === 'week') { $('#kmFrom').value = f(new Date(Date.now() - 6 * 86400000)); $('#kmTo').value = f(new Date()); }
+      else if (m === 'month') { $('#kmFrom').value = f(new Date(n.getFullYear(), n.getMonth(), 1)); $('#kmTo').value = f(new Date()); }
+      else { $('#kmFrom').value = f(new Date(n.getFullYear(), n.getMonth() - 1, 1)); $('#kmTo').value = f(new Date(n.getFullYear(), n.getMonth(), 0)); }
+      await loadKmReport(); }
     else if (sw) { const on = sw.dataset.on !== '1'; await kmRpc('admin_set_track_km', {p_driver: sw.dataset.kmsw, p_on: on}); toast(on ? 'Km tracking ON' : 'Km tracking OFF'); await loadDrivers(); }
   } catch (x) { toast(netMsg(x), true); }
 });
 function kmCsv() {
   const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"', flags = kmFlags(KmA.rows);
-  const lines = [['Date', 'Driver', 'Vehicle', 'Start km', 'End km', 'Km driven', 'Note'].map(q).join(',')].concat(KmA.rows.map(r => [r.day, r.driver_name, r.vehicle, r.start_km, r.end_km, r.end_km != null ? r.end_km - r.start_km : '', flags[r.id] || ''].map(q).join(',')));
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv'})); a.download = 'Driver_km_' + dateKey() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+  const lines = [['Date', 'Driver', 'Vehicle type', 'Vehicle number', 'Start km', 'End km', 'Km driven', 'Note'].map(q).join(',')].concat(KmA.rows.map(r => [r.day, r.driver_name, r.vehicle_type, r.vehicle, r.start_km, r.end_km, r.end_km != null ? r.end_km - r.start_km : '', flags[r.id] || ''].map(q).join(',')));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv'})); a.download = 'Driver_km_' + $('#kmFrom').value + '_to_' + $('#kmTo').value + '.csv'; document.body.appendChild(a); a.click(); a.remove();
 }
+document.addEventListener('change', e => { if (e.target.id === 'kmFrom' || e.target.id === 'kmTo') loadKmReport(); });
 /* =====================================================================
    Boot
    ===================================================================== */
