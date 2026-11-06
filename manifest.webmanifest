@@ -1,12 +1,12 @@
 {
-  "name": "Invoice & POD Manager",
-  "short_name": "Invoice POD",
+  "name": "Alfa One Invoice & POD Manager",
+  "short_name": "Alfa One POD",
   "description": "Track invoices and PODs, attach photos and export to D365.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e2438",
+  "background_color": "#ffffff",
   "theme_color": "#0e2438",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
