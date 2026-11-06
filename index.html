@@ -2016,13 +2016,19 @@ async function pdfUpload(row) {
 async function zipUploads(rows) {
   const done = [];
   await withBusy('Building ZIP…', async (setP, setMsg) => {
-    const zip = new JSZip(), used = {}, csv = [['Invoice', 'Driver', 'Uploaded', 'Pages', 'File']]; let i = 0;
+    const zip = new JSZip(), used = {}, csv = [['SO Number', 'Customer', 'Driver', 'Vehicle', 'Order status', 'Uploaded', 'Pages', 'File']]; let i = 0;
+    const info = {};
+    try {
+      if (!session.demo) { const q = [...new Set(rows.map(r => r.inv_no))].join(',');
+        const res = await api('/rest/v1/assignments?select=so_no,customer,vehicle,status,driver_name,work_date&so_no=in.(' + q + ')&order=work_date.desc'); if (res.ok) (await res.json()).forEach(a => { if (!info[a.so_no]) info[a.so_no] = a; }); }
+    } catch (e) {}
+    const lt = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
     for (const r of rows) {
       setMsg(`Adding ${r.inv_no} (${++i}/${rows.length})…`); setP((i - 1) / rows.length);
       const bytes = await buildCombinedPdf(r.inv_no, asDocs(await fetchPageBlobs(r)));
       used[r.inv_no] = (used[r.inv_no] || 0) + 1;
       const name = r.inv_no + (used[r.inv_no] > 1 ? '_' + used[r.inv_no] : '') + '.pdf';
-      zip.file(name, bytes); csv.push([r.inv_no, r.driver_name || '', new Date(r.created_at).toISOString(), r.pages, name]); done.push(r.id);
+      zip.file(name, bytes); const o = info[r.inv_no] || {}; csv.push([r.inv_no, o.customer || '', r.driver_name || o.driver_name || '', o.vehicle || '', o.status || '', lt(r.created_at), r.pages, name]); done.push(r.id);
     }
     zip.file('index.csv', csv.map(row => row.map(csvCell).join(',')).join('\r\n'));
     setMsg('Compressing…');
