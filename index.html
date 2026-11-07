@@ -439,6 +439,23 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
 
 .viewbar .tabs{flex-wrap:wrap}.vtab{padding:7px 11px}
 #drvRef{margin-right:6px}
+
+/* today dashboard */
+.dtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.dtile{appearance:none;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 10px;cursor:pointer;font:inherit}
+.dtile b{display:block;font-size:26px;line-height:1;font-weight:800;letter-spacing:-.02em}.dtile span{display:block;margin-top:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.dtile.ok b{color:var(--closed)}.dtile.warn b{color:#c98400}.dtile.bad{border-color:#e5484d}.dtile.bad b{color:#e5484d}
+.dlinks{margin-bottom:6px}.dh{margin:18px 0 8px;font-size:14px}.dh .m{font-weight:400;font-size:12px}
+.drow,.mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:8px}
+.drow>div:first-child{flex:1;min-width:0}.drow .stack{margin-top:7px}.mrow.late{border-color:#e5484d}
+.pill.bad{background:#e5484d;color:#fff}.pill.warn{background:#f0b429;color:#3b2b00}
+.dcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.meter{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}.meter i{display:block;height:100%;background:var(--closed,#2e9d5c);border-radius:99px}.meter i.warn{background:#f0b429}.meter i.bad{background:#e5484d}
+.mline{display:flex;justify-content:space-between;gap:8px;font-size:14px}.mline span{color:var(--muted)}
+.late-txt{color:#c98400;font-weight:600}
+.cleanrow{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}.cleanrow select{padding:9px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px}
+.warncard{border:1.5px solid #f0b429;background:rgba(240,180,41,.12)}body.driver[data-dtab="orders"] #podWarn:not([hidden]){display:block!important}
+#dnUp{position:absolute;top:4px;right:calc(50% - 26px);background:#e5484d;color:#fff;border-radius:99px;font-size:11px;min-width:18px;padding:1px 5px;text-align:center}#dnUp[hidden]{display:none}
 </style>
 </head>
 <body class="booting">
@@ -446,7 +463,7 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
   <div><h1>Invoice &amp; POD Manager</h1><div class="sub" id="whoLine">Invoices and delivery PODs</div></div>
   <div class="hdr-actions"><button class="btn primary" id="btnNew" type="button">+ New invoice</button><button class="btn" id="btnSignOut" type="button" hidden>Sign out</button></div>
 </div></header>
-<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false">Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button><button class="vtab" role="tab" data-view="km" aria-selected="false">Km</button><button class="vtab" role="tab" data-view="charges" aria-selected="false">Charges</button></div></div></nav>
+<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="today" aria-selected="false">Today<span class="dot" id="cnt-today" hidden>0</span></button><button class="vtab" role="tab" data-view="invoices" aria-selected="true">Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false">Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button><button class="vtab" role="tab" data-view="km" aria-selected="false">Km</button><button class="vtab" role="tab" data-view="charges" aria-selected="false">Charges</button></div></div></nav>
 
 <main class="wrap">
  <div id="viewInvoices">
@@ -490,6 +507,11 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
   </div>
   <ul class="list" id="ilist" aria-live="polite"></ul>
   <div style="text-align:center;margin-top:12px"><button class="btn" id="btnMore" type="button" hidden>Load older</button></div>
+ </div>
+
+ <div id="viewToday" hidden>
+  <div class="toolbar"><strong>Today · <span id="dashDate"></span></strong><span class="grow"></span><button class="btn" id="btnDashRef" type="button">↻ Refresh</button></div>
+  <div id="dashBody"></div>
  </div>
 
  <div id="viewKm" hidden>
@@ -594,7 +616,7 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
   <label class="kmf">End km (empty = day still open)<input id="kmeEnd" type="number" inputmode="numeric"></label>
   <div class="two"><button class="btn" id="kmeCancel" type="button">Cancel</button><button class="btn primary" id="kmeOk" type="button">Save</button></div><button class="btn danger main" id="kmeDel" type="button">Delete entry</button></div></div>
 
-<nav id="dnav" aria-label="Driver menu"><button type="button" data-dtab="orders"><i>📦</i><span>Orders</span><sup id="dnOrd" hidden></sup></button><button type="button" data-dtab="upload"><i>📷</i><span>Upload POD</span></button><button type="button" data-dtab="mypods"><i>🗂</i><span>My PODs</span><sup id="dnMy" hidden></sup></button><button type="button" data-dtab="charges" id="dnChg"><i>💰</i><span>Charges</span></button><button type="button" data-dtab="top"><i>🏆</i><span>Top</span></button></nav>
+<nav id="dnav" aria-label="Driver menu"><button type="button" data-dtab="orders"><i>📦</i><span>Orders</span><sup id="dnOrd" hidden></sup></button><button type="button" data-dtab="upload"><i>📷</i><span>Upload POD</span><sup id="dnUp" hidden></sup></button><button type="button" data-dtab="mypods"><i>🗂</i><span>My PODs</span><sup id="dnMy" hidden></sup></button><button type="button" data-dtab="charges" id="dnChg"><i>💰</i><span>Charges</span></button><button type="button" data-dtab="top"><i>🏆</i><span>Top</span></button></nav>
 <div class="tsheet" id="reqSheet" hidden><div class="tbox"><div class="cap"></div><h3 id="reqTitle">Why change?</h3><div class="rs" id="reqReasons"></div><input id="tsNote" style="display:none"><input id="reqNote" class="kmin" placeholder="Note (optional)" autocomplete="off"><div class="two"><button class="btn" id="reqCancel" type="button">Cancel</button><button class="btn primary" id="reqOk" type="button">Send request</button></div></div></div>
 <div class="tsheet" id="chgSheet" hidden><div class="tbox"><div class="cap"></div><h3 id="chgTitle">Change SO number</h3><label class="kmf">SO- <input id="chgIn" inputmode="numeric" placeholder="0000000" autocomplete="off"></label><div class="socheck" id="chgInfo"></div><div class="two"><button class="btn" id="chgCancel" type="button">Cancel</button><button class="btn primary" id="chgOk" type="button">Change</button></div></div></div>
 <div class="tsheet" id="linkSheet" hidden><div class="tbox tall"><div class="cap"></div><h3 id="linkTitle">Link to order</h3><input id="linkQ" class="kmin" type="search" placeholder="Search customer or SO number" autocomplete="off"><div id="linkList"></div><button class="btn" id="linkCancel" type="button" style="width:100%;margin-top:8px">Cancel</button></div></div>
@@ -604,6 +626,8 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
     <header><h2><span id="edTitle">New invoice</span><span class="chip open" id="edChip" hidden>Open</span></h2><button class="iconbtn" id="edClose" data-act="ed-cancel" aria-label="Close editor" type="button">✕</button><button class="btn sm" id="drvRef" type="button" aria-label="Refresh" hidden>↻ Refresh</button><button class="btn sm" id="drvOut" data-act="drv-out" type="button" hidden>Sign out</button></header>
     <div class="body">
       <div class="banner" id="outbox" hidden></div>
+      <section class="card warncard" id="podWarn" hidden></section>
+
       <section class="card" id="cardTrip" hidden>
         <h3>Today's deliveries <span class="tripCount" id="tripCount"></span></h3>
         <div id="tripBar"></div>
@@ -2053,7 +2077,7 @@ async function loadInbox() {
   if (Inbox.loading) return;
   Inbox.loading = true; renderInbox();
   try {
-    const res = await api('/rest/v1/pod_uploads?select=id,inv_no,driver_name,pages,file_paths,created_at,downloaded_at,matched,change_status,change_reason&order=created_at.desc&limit=' + Inbox.limit);
+    const res = await api('/rest/v1/pod_uploads?select=id,inv_no,driver_name,pages,file_paths,created_at,downloaded_at,matched,change_status,change_reason,files_removed_at&order=created_at.desc&limit=' + Inbox.limit);
     if (!res.ok) throw new Error('Server said ' + res.status);
     Inbox.rows = await res.json(); Inbox.more = Inbox.rows.length >= Inbox.limit; Inbox.err = ''; Inbox.loaded = true;
     const ids = new Set(Inbox.rows.map(r => r.id)); [...Inbox.sel].forEach(i => { if (!ids.has(i)) Inbox.sel.delete(i); });
@@ -2074,8 +2098,7 @@ function irowHtml(r) {
     <div><div class="no">${esc(r.inv_no)} <span class="chip ${isNw ? 'open' : 'closed'}">${isNw ? 'New' : 'Downloaded'}</span>${r.matched === false ? ' <span class="chip warnchip">Not assigned</span>' : ''}${r.change_status === 'requested' ? ' <span class="chip warnchip">Change requested</span>' : r.change_status === 'approved' ? ' <span class="chip closed">Change approved</span>' : ''}</div>
       <div class="meta">${esc(r.driver_name || 'Driver')} · ${fmtDate(r.created_at)} · ${r.pages} page${r.pages === 1 ? '' : 's'}</div>${r.change_status === 'requested' ? `<div class="reason">“${esc(r.change_reason || '')}”</div><div class="reqacts"><button class="btn sm primary" data-iact="appr" type="button">Approve</button><button class="btn sm" data-iact="rej" type="button">Reject</button></div>` : ''}${r.matched === false ? '<div class="reqacts"><button class="btn sm primary" data-iact="link" type="button">Link to order…</button></div>' : ''}</div>
     <div class="acts">
-      <button class="btn sm" data-iact="view" type="button">View</button>
-      <button class="btn sm" data-iact="pdf" type="button">PDF</button>
+      ${r.files_removed_at ? '<span class="m" style="align-self:center">Photos removed</span>' : '<button class="btn sm" data-iact="view" type="button">View</button><button class="btn sm" data-iact="pdf" type="button">PDF</button>'}
       <button class="btn sm danger" data-iact="del" type="button">Delete</button>
     </div></li>`;
 }
@@ -2101,6 +2124,7 @@ function renderInbox() {
   $('#btnMore').hidden = !Inbox.more;
 }
 async function fetchPageBlobs(row) {
+  if (row.files_removed_at) throw new Error('The photos of ' + row.inv_no + ' were removed to free space');
   const out = [];
   for (const p of row.file_paths) {
     const res = await api('/storage/v1/object/authenticated/pods/' + p.split('/').map(encodeURIComponent).join('/'));
@@ -2191,13 +2215,14 @@ $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer' || e.
 
 let view = 'invoices';
 function setView(v) {
-  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewCharges').hidden = v !== 'charges'; $('#btnNew').hidden = v !== 'invoices';
+  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewToday').hidden = v !== 'today'; $('#viewCharges').hidden = v !== 'charges'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (v === 'inbox') loadInbox();
   if (v === 'drivers') { loadDrivers(); loadTop(); }
   if (v === 'orders') loadOrders();
   if (v === 'km') loadKmReport();
+  if (v === 'today') loadDash();
   if (v === 'charges') { Chg.open = null; loadChg(); loadChgReport(); }
 }
 /* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
@@ -2242,6 +2267,7 @@ document.addEventListener('visibilitychange', () => {
   if (App.role === 'admin' && view === 'drivers') loadDrivers();
   if (App.role === 'admin' && view === 'orders') loadOrders();
   if (App.role === 'admin' && view === 'km') loadKmReport();
+  if (App.role === 'admin' && view === 'today') loadDash();
   if (App.role === 'admin' && view === 'charges') { loadChg(); loadChgReport(); }
   if (App.role === 'driver') { syncOutbox(); pingSeen(); loadTrip(); }
 });
@@ -2260,7 +2286,7 @@ function startApp() {
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
-    setView(['inbox', 'drivers', 'orders', 'km', 'charges'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
+    setView(['today', 'inbox', 'drivers', 'orders', 'km', 'charges'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'today');
     loadInbox(); if (!session.demo) { loadDrivers(); loadTop(); }
     setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
     addEventListener('online', () => { if (view === 'inbox') loadInbox(); });
@@ -2743,6 +2769,7 @@ function setDTab(t) {
 }
 document.addEventListener('click', e => { const b = e.target.closest('#dnav [data-dtab]'); if (b) setDTab(b.dataset.dtab); });
 function navBadges() {
+  try { podReminder(); } catch (e) {}
   const n = typeof Trip !== 'undefined' ? Trip.rows.filter(r => r.status === 'assigned' && r.work_date === dateKey()).length : 0;
   const o = $('#dnOrd'); if (o) { o.hidden = !n; o.textContent = n; }
   const m = Mine.rows.filter(r => r.change_status === 'approved' && !r.downloaded_at).length, my = $('#dnMy'); if (my) { my.hidden = !m; my.textContent = m; }
@@ -2951,6 +2978,89 @@ async function refreshDriver() {
   setDTab(Dtab);
   await Promise.all([loadTrip(), loadKm(), loadMyPods(), loadTop()].map(p => Promise.resolve(p).catch(() => {})));
 }
+/* =============== Today dashboard, missing PODs, storage / backup / cleanup =============== */
+const Dash = {d: null, st: null, days: 30};
+const fmtSize = b => { b = Number(b || 0); return b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.round(b / 1e3) + ' KB'; };
+const agoTxt = ms => { const d = Math.floor(ms / 864e5); return d <= 0 ? 'today' : d === 1 ? '1 day ago' : d + ' days ago'; };
+async function loadDash() {
+  if (!session || session.role !== 'admin' || session.demo) return;
+  try { Dash.d = await chgRpc('dash_today', {}); } catch (e) { toast(netMsg(e), true); }
+  try { Dash.st = await chgRpc('storage_usage', {p_days: Dash.days}); } catch (e) {}
+  renderDash();
+}
+function dashBadge() { const b = $('#cnt-today'); if (!b) return; const n = Dash.d ? Dash.d.missing.length : 0; b.hidden = !n; b.textContent = n > 99 ? '99+' : n; }
+function renderDash() {
+  const el = $('#dashBody'); if (!el) return; const d = Dash.d; dashBadge();
+  if (!d) { el.innerHTML = '<div class="empty">Loading…</div>'; return; }
+  const c = d.counts || {}, n = k => Number(c[k] || 0);
+  const tile = (v, l, cls, go) => `<button type="button" class="dtile ${cls || ''}" ${go ? 'data-dgo="' + go + '"' : ''}><b>${v}</b><span>${l}</span></button>`;
+  const late = d.missing.filter(m => m.days >= 2).length;
+  let h = `<div class="dtiles">${tile(d.total, 'Orders today', '', 'orders')}${tile(n('complete') + n('handed_over'), 'Done', 'ok', 'orders')}${tile(n('assigned') + n('out'), 'Still out', '', 'orders')}${tile(d.missing.length, 'POD missing', d.missing.length ? (late ? 'bad' : 'warn') : 'ok')}${tile(n('returned'), 'Returned', n('returned') ? 'warn' : '', 'orders')}${tile(d.unassigned_all, 'Unassigned', d.unassigned_all ? 'warn' : '', 'orders')}</div>`;
+  h += `<div class="dlinks"><button type="button" class="chgv" data-dgo="inbox"><div><b>PODs to download</b><div class="m">${d.new_uploads} new · ${d.uploads_today} uploaded today${d.not_assigned ? ' · ' + d.not_assigned + ' not assigned' : ''}</div></div><span class="pill ${d.new_uploads ? '' : 'ok'}">${d.new_uploads}</span></button>
+  <button type="button" class="chgv" data-dgo="drivers"><div><b>Drivers online</b><div class="m">${d.online} of ${d.drivers_total} using the app right now</div></div><span class="pill ${d.online ? 'ok' : ''}">${d.online}</span></button></div>`;
+  h += `<h3 class="dh">Drivers today</h3>` + (d.drivers.length ? d.drivers.map(x => { const done = x.complete + x.handed_over; return `<div class="drow"><div><b class="nmc">${esc(x.name)}</b><div class="m">${done} of ${x.total} done${x.open ? ' · ' + x.open + ' still out' : ''}${x.returned ? ' · ' + x.returned + ' returned' : ''}</div><div class="stack"><i class="s-delivered" style="width:${done / x.total * 100}%"></i><i class="s-out" style="width:${x.pod_pending / x.total * 100}%"></i><i class="s-returned" style="width:${x.returned / x.total * 100}%"></i></div></div>${x.pod_pending ? `<span class="pill bad">${x.pod_pending} POD missing</span>` : done === x.total ? '<span class="pill ok">All done</span>' : ''}</div>`; }).join('') : '<div class="m">No orders assigned for today.</div>');
+  h += `<h3 class="dh">POD missing <span class="m">· delivered but no photo yet</span></h3>` + (d.missing.length ? d.missing.map(m => `<div class="mrow ${m.days >= 2 ? 'late' : ''}"><div><b>${esc(m.so_no)}</b> <span class="m">${esc(m.customer || '')}</span><div class="m"><span class="nmc">${esc(m.driver_name || '')}</span></div></div><span class="pill ${m.days >= 2 ? 'bad' : 'warn'}">${m.days <= 0 ? 'today' : m.days + ' day' + (m.days > 1 ? 's' : '')}</span></div>`).join('') : '<div class="m">✓ Every delivered order has its POD.</div>');
+  const s = Dash.st, bk = Number(LS.get('pod.backup') || 0), bd = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
+  const pct = (b, lim) => Math.min(100, Math.round(b / lim * 100)), sp = s ? pct(s.storage_bytes, 1e9) : 0, dp = s ? pct(s.db_bytes, 5e8) : 0;
+  const bar = p => `<div class="meter"><i class="${p >= 90 ? 'bad' : p >= 70 ? 'warn' : ''}" style="width:${Math.max(p, 2)}%"></i></div>`;
+  h += `<h3 class="dh">Storage &amp; backup</h3><div class="dcard">` + (s ? `
+    <div class="mline"><b>Photos</b><span>${fmtSize(s.storage_bytes)} of 1 GB · ${sp}%</span></div>${bar(sp)}
+    <div class="mline" style="margin-top:12px"><b>Database</b><span>${fmtSize(s.db_bytes)} of 500 MB · ${dp}%</span></div>${bar(dp)}
+    <div class="m" style="margin-top:6px">${s.files} photo files stored.${sp >= 70 ? ' <b style="color:var(--danger,#e5484d)">Space is getting full — free some space below.</b>' : ''}</div>` : '<div class="m">Could not read storage size.</div>') + `</div>
+  <div class="dcard"><b>Backup</b><div class="m" style="margin:4px 0 10px">Orders, km, charges, PODs list and history as Excel-ready files in one ZIP (photos are not included — you already download those).</div>
+    <div class="m ${bd === null || bd > 7 ? 'late-txt' : ''}">${bd === null ? '⚠ No backup made from this phone yet.' : bd > 7 ? '⚠ Last backup ' + agoTxt(Date.now() - bk) + ' — time for a new one.' : '✓ Last backup ' + agoTxt(Date.now() - bk) + '.'}</div>
+    <button class="btn primary main" id="btnBackup" type="button" style="margin-top:10px">Download backup</button></div>
+  <div class="dcard"><b>Free up space</b><div class="m" style="margin:4px 0 10px">Removes the photos of PODs you already downloaded. The record (SO number, driver, time) stays in the list and in your CSV/ZIP files; only the photo is gone.</div>
+    <div class="cleanrow"><span>Older than</span><select id="cleanDays">${[14, 30, 60].map(x => `<option value="${x}" ${x === Dash.days ? 'selected' : ''}>${x} days</option>`).join('')}</select><span>after download</span></div>
+    <div class="m" style="margin:8px 0">${s ? (s.clean_pods ? '<b>' + s.clean_pods + ' PODs · ' + fmtSize(s.clean_bytes) + '</b> can be removed.' : 'Nothing to remove yet.') : ''}</div>
+    <button class="btn" id="btnClean" type="button" style="width:100%;color:var(--danger,#e5484d)" ${s && s.clean_pods ? '' : 'disabled'}>Remove these photos</button></div>`;
+  el.innerHTML = h; const ds = $('#dashDate'); if (ds) ds.textContent = dayLabel(d.today);
+}
+const tarr = (rows) => { rows = rows || []; const keys = [...new Set(rows.flatMap(r => Object.keys(r)))]; return [keys.map(csvCell).join(',')].concat(rows.map(r => keys.map(k => csvCell(r[k] !== null && typeof r[k] === 'object' ? JSON.stringify(r[k]) : r[k])).join(','))).join('\r\n'); };
+async function makeBackup() {
+  await withBusy('Building backup…', async () => {
+    const j = await chgRpc('admin_backup', {}), zip = new JSZip(), day = dateKey();
+    ['assignments', 'order_events', 'pod_uploads', 'km_days', 'outside_charges', 'order_charges', 'drivers'].forEach(k => zip.file(k + '.csv', '﻿' + tarr(j[k])));
+    zip.file('backup.json', JSON.stringify(j));
+    zip.file('README.txt', 'Alfa One backup made ' + new Date().toLocaleString() + '\r\nOpen the .csv files in Excel. backup.json holds the same data for restoring.\r\nPhotos are not included.');
+    downloadBlob(await zip.generateAsync({type: 'blob', compression: 'DEFLATE'}), 'AlfaOne_backup_' + day + '.zip');
+  });
+  LS.set('pod.backup', String(Date.now())); toast('Backup saved ✓'); renderDash();
+}
+async function cleanPhotos() {
+  let removed = 0;
+  await withBusy('Removing photos…', async (setP, setMsg) => {
+    for (let loop = 0; loop < 30; loop++) {
+      const list = await chgRpc('cleanup_list', {p_days: Dash.days}); if (!list.length) break;
+      const paths = list.flatMap(x => x.file_paths || []);
+      if (paths.length) { const res = await api('/storage/v1/object/pods', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({prefixes: paths})}); if (!res.ok) throw new Error('Could not remove photos (' + res.status + ')'); }
+      await chgRpc('cleanup_done', {p_ids: list.map(x => x.id)}); removed += list.length; setMsg(removed + ' PODs cleaned…');
+    }
+  });
+  toast(removed + ' PODs cleaned ✓'); await loadDash(); if (typeof loadInbox === 'function') loadInbox();
+}
+document.addEventListener('click', async e => {
+  const t = e.target;
+  try {
+    const g = t.closest('[data-dgo]'); if (g) return setView(g.dataset.dgo);
+    if (t.id === 'btnDashRef') { await loadDash(); toast('Refreshed'); }
+    else if (t.id === 'btnBackup') await makeBackup();
+    else if (t.id === 'btnClean') {
+      if (t.dataset.arm !== '1') { t.dataset.arm = '1'; t.textContent = 'Tap again to remove the photos'; setTimeout(() => { if (t.isConnected) { t.dataset.arm = ''; t.textContent = 'Remove these photos'; } }, 4000); return; }
+      await cleanPhotos();
+    }
+  } catch (x) { toast(netMsg(x), true); }
+});
+document.addEventListener('change', e => { if (e.target.id === 'cleanDays') { Dash.days = Number(e.target.value); loadDash(); } });
+
+/* ---- driver: reminder for deliveries without a POD ---- */
+function podReminder() {
+  const el = $('#podWarn'); if (!el || App.role !== 'driver' || typeof Trip === 'undefined') return;
+  const n = Trip.rows.filter(r => r.status === 'pod_pending').length;
+  el.hidden = !n; if (n) el.innerHTML = `<b>⚠ ${n} deliver${n === 1 ? 'y needs' : 'ies need'} a POD photo</b><div class="m">${esc(Trip.rows.filter(r => r.status === 'pod_pending').slice(0, 3).map(r => r.customer || r.so_no).join(', '))}${n > 3 ? '…' : ''}</div><button class="btn sm primary" type="button" data-dgoup="1" style="margin-top:8px">Upload POD now</button>`;
+  const up = $('#dnUp'); if (up) { up.hidden = !n; up.textContent = n; }
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-dgoup]')) setDTab('upload'); });
 /* =====================================================================
    Boot
    ===================================================================== */
