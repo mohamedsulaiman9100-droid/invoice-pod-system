@@ -2852,7 +2852,7 @@ const Chg = {date: dateKey(), rows: [], open: null, loading: false};
 const chgTotal = r => (r.orders || []).filter(o => DELIVERED.includes(o.status)).reduce((t, o) => t + Number(o.amount || 0), 0) + Number(r.labour || 0) + Number(r.return_charge || 0);
 async function loadChg() {
   if (!session || !(session.charges || session.role === 'admin')) return;
-  try { Chg.rows = await chgRpc('charges_day', {p_date: Chg.date}); } catch (e) { toast(netMsg(e), true); Chg.rows = Chg.rows || []; }
+  try { Chg.rows = await chgRpc('charges_day', {p_date: Chg.date}); } catch (e) { toast(netMsg(e), true); Chg.rows = []; }
   if (Chg.open && !Chg.rows.find(r => r.driver_id === Chg.open)) Chg.open = null;
   renderChg();
 }
@@ -2879,7 +2879,8 @@ function renderChgOne(c, r) {
   <div class="cr"><span>Labour</span><input class="cin" id="chgLab" inputmode="decimal" placeholder="0" value="${r.labour || ''}"></div>
   <div class="cr"><span>Return charge<small>one charge for all returns</small></span><input class="cin" id="chgRet" inputmode="decimal" placeholder="0" value="${r.return_charge || ''}"></div>
   <div class="chgall"><span>Total (AED)</span><b id="chgTot">0</b></div>
-  <button class="btn primary main" id="chgSave" type="button">Save</button>`;
+  <button class="btn primary main" id="chgSave" type="button">Save</button>
+  ${r.saved && session.role === 'admin' ? '<button class="btn" id="chgDel" type="button" style="margin-top:10px;width:100%;color:var(--danger,#e5484d)">Delete this day\'s charges</button>' : ''}`;
   chgLive();
 }
 const numOf = el => { const v = parseFloat(String(el && el.value || '').replace(',', '.')); return isFinite(v) && v > 0 ? v : 0; };
@@ -2892,6 +2893,10 @@ document.addEventListener('click', async e => {
     if (v) { Chg.open = v.dataset.chgv; renderChg(); window.scrollTo(0, 0); }
     else if (t.id === 'chgBack') { Chg.open = null; await loadChg(); }
     else if (t.id === 'chgPrev' || t.id === 'chgNext') { Chg.date = shiftDay(Chg.date, t.id === 'chgPrev' ? -1 : 1); Chg.open = null; await loadChg(); }
+    else if (t.id === 'chgDel') {
+      if (t.dataset.arm !== '1') { t.dataset.arm = '1'; t.textContent = 'Tap again to delete'; setTimeout(() => { if (t.isConnected) { t.dataset.arm = ''; t.textContent = "Delete this day's charges"; } }, 4000); return; }
+      await chgRpc('charges_delete', {p_date: Chg.date, p_driver: Chg.open}); toast('Deleted'); Chg.open = null; await loadChg(); if (session.role === 'admin') loadChgReport();
+    }
     else if (t.id === 'chgSave') {
       const r = Chg.rows.find(x => x.driver_id === Chg.open); if (!r) return;
       const orders = [...document.querySelectorAll('#chgBody [data-o], #chgBodyA [data-o]')].map(i => ({id: i.dataset.o, amount: numOf(i)}));
