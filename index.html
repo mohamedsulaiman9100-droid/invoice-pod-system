@@ -418,9 +418,24 @@ body.driver #edClose{display:none}
 .tabs{overflow:visible;flex-wrap:wrap;gap:4px}
 
 .kmchips button{padding:7px 11px;font-size:13px;border-radius:999px}
-.drv .nm,.kmrow b,.kmchips button,.top b,.dr b,.myc .dn,#vMeta,.mtn,.cc .drvn{text-transform:capitalize}
+.drv .nm,.kmrow b,.kmchips button,.dr b,.myc .dn,#vMeta,.mtn,.cc .drvn{text-transform:capitalize}
 .drv .nm{font-weight:700;font-size:18px;letter-spacing:.01em}
 .drv .nm::first-letter{color:var(--brass)}
+
+/* charges */
+#dnChg{display:none!important}body.driver.chg #dnChg{display:flex!important}body.driver.chg #dnav{grid-template-columns:repeat(5,1fr)}
+body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{display:none}
+.drv{flex-wrap:wrap}.tgw{flex:0 0 100%;display:flex;gap:6px;margin-top:10px}.drv .tgw .tgl{margin-left:0;flex:1;padding:8px 4px}
+.nmc{text-transform:capitalize}
+.chgnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.chgnav button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:24px;cursor:pointer}.chgnav b{font-size:16px}
+.chgv{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:9px;cursor:pointer;font:inherit}
+.chgv .m{font-size:12.5px;color:var(--muted)}
+.pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;background:var(--brass);color:var(--brass-ink);white-space:nowrap}.pill.ok{background:var(--closed-bg);color:var(--closed)}
+.chgall{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:13px;border-radius:12px;background:var(--navy,#0f2540);color:#fff;font-weight:700}.chgall b{font-size:19px}
+.chgh{margin:16px 0 4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.cr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}.cr small{display:block;color:var(--muted);font-size:12px}
+.cin{width:100px;text-align:right;padding:10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:17px;font-weight:700;min-height:44px}
+.chgbig{font-size:26px;font-weight:800;margin-top:10px}.chgtot{margin-top:6px}.chgrows{margin-top:6px}
 </style>
 </head>
 <body class="booting">
@@ -479,6 +494,7 @@ body.driver #edClose{display:none}
   <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
   <section class="card" style="margin-bottom:12px"><h3>🏆 Top drivers this week</h3><div class="hint">Orders completed with POD, since Monday</div><div class="topList"></div></section>
   <ul class="list" id="drvList" aria-live="polite"></ul>
+  <section class="card" id="chgBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
   <section class="card" id="kmBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Kilometres</h3><button class="btn sm" id="kmCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-kmr="week" type="button">7 days</button><button class="btn sm" data-kmr="month" type="button">This month</button><button class="btn sm" data-kmr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="kmFrom" aria-label="From"><input type="date" id="kmTo" aria-label="To"></div><div class="rs kmchips" style="margin:10px 0 0"></div><div class="kmtot"></div><div class="kmrows"></div></section>
  </div>
  <div id="viewOrders" hidden>
@@ -565,7 +581,7 @@ body.driver #edClose{display:none}
   <label class="kmf">End km (empty = day still open)<input id="kmeEnd" type="number" inputmode="numeric"></label>
   <div class="two"><button class="btn" id="kmeCancel" type="button">Cancel</button><button class="btn primary" id="kmeOk" type="button">Save</button></div><button class="btn danger main" id="kmeDel" type="button">Delete entry</button></div></div>
 
-<nav id="dnav" aria-label="Driver menu"><button type="button" data-dtab="orders"><i>📦</i><span>Orders</span><sup id="dnOrd" hidden></sup></button><button type="button" data-dtab="upload"><i>📷</i><span>Upload POD</span></button><button type="button" data-dtab="mypods"><i>🗂</i><span>My PODs</span><sup id="dnMy" hidden></sup></button><button type="button" data-dtab="top"><i>🏆</i><span>Top</span></button></nav>
+<nav id="dnav" aria-label="Driver menu"><button type="button" data-dtab="orders"><i>📦</i><span>Orders</span><sup id="dnOrd" hidden></sup></button><button type="button" data-dtab="upload"><i>📷</i><span>Upload POD</span></button><button type="button" data-dtab="mypods"><i>🗂</i><span>My PODs</span><sup id="dnMy" hidden></sup></button><button type="button" data-dtab="charges" id="dnChg"><i>💰</i><span>Charges</span></button><button type="button" data-dtab="top"><i>🏆</i><span>Top</span></button></nav>
 <div class="tsheet" id="reqSheet" hidden><div class="tbox"><div class="cap"></div><h3 id="reqTitle">Why change?</h3><div class="rs" id="reqReasons"></div><input id="tsNote" style="display:none"><input id="reqNote" class="kmin" placeholder="Note (optional)" autocomplete="off"><div class="two"><button class="btn" id="reqCancel" type="button">Cancel</button><button class="btn primary" id="reqOk" type="button">Send request</button></div></div></div>
 <div class="tsheet" id="chgSheet" hidden><div class="tbox"><div class="cap"></div><h3 id="chgTitle">Change SO number</h3><label class="kmf">SO- <input id="chgIn" inputmode="numeric" placeholder="0000000" autocomplete="off"></label><div class="socheck" id="chgInfo"></div><div class="two"><button class="btn" id="chgCancel" type="button">Cancel</button><button class="btn primary" id="chgOk" type="button">Change</button></div></div></div>
 <div class="tsheet" id="linkSheet" hidden><div class="tbox tall"><div class="cap"></div><h3 id="linkTitle">Link to order</h3><input id="linkQ" class="kmin" type="search" placeholder="Search customer or SO number" autocomplete="off"><div id="linkList"></div><button class="btn" id="linkCancel" type="button" style="width:100%;margin-top:8px">Cancel</button></div></div>
@@ -589,6 +605,7 @@ body.driver #edClose{display:none}
 
       <section class="card kmcard" id="cardKm" hidden></section>
 
+      <section class="card" id="cardChg"><div id="chgBody"></div></section>
       <section class="card" id="cardMy"><h3>My PODs</h3><div class="hint">Wrong POD? Tap Request change. Admin must approve before you can change it. After admin downloads it, it is locked.</div><div id="myList"></div></section>
 
       <section class="card" id="cardNo">
@@ -1839,11 +1856,11 @@ async function signIn(user, pass) {
   const j = await res.json();
   const s = {access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (j.expires_in || 3600) * 1000, uid: j.user.id, role: null, name: null};
   let pr;
-  try { pr = await fetch(CFG.url + '/rest/v1/profiles?select=role,display_name&id=eq.' + s.uid, {headers: {apikey: CFG.key, Authorization: 'Bearer ' + s.access}}); }
+  try { pr = await fetch(CFG.url + '/rest/v1/profiles?select=role,display_name,charges_access&id=eq.' + s.uid, {headers: {apikey: CFG.key, Authorization: 'Bearer ' + s.access}}); }
   catch (e) { throw new Error('No internet. Connect and try again.'); }
   const rows = pr.ok ? await pr.json() : [];
   if (!rows.length) throw new Error('This login is not set up yet. Ask your admin.');
-  s.role = rows[0].role; s.name = rows[0].display_name || String(user).trim();
+  s.role = rows[0].role; s.name = rows[0].display_name || String(user).trim(); s.charges = !!rows[0].charges_access;
   session = s; saveSession();
 }
 async function signOut() {
@@ -1853,11 +1870,11 @@ async function signOut() {
 }
 async function verifyRole() {      // catches a removed login or a changed role
   try {
-    const res = await api('/rest/v1/profiles?select=role,display_name&id=eq.' + session.uid);
+    const res = await api('/rest/v1/profiles?select=role,display_name,charges_access&id=eq.' + session.uid);
     if (!res.ok) return;
     const rows = await res.json();
     if (!rows.length) { await signOut(); return; }
-    if (rows[0].role !== session.role) { session.role = rows[0].role; session.name = rows[0].display_name || session.name; saveSession(); location.reload(); }
+    if (rows[0].role !== session.role || !!rows[0].charges_access !== !!session.charges) { session.charges = !!rows[0].charges_access; session.role = rows[0].role; session.name = rows[0].display_name || session.name; saveSession(); location.reload(); }
   } catch (e) {}
 }
 
@@ -2188,7 +2205,7 @@ function agoText(t) {
 }
 async function loadDrivers() {
   try {
-    const res = await api('/rest/v1/profiles?select=id,display_name,last_seen,track_km&role=eq.driver&order=display_name');
+    const res = await api('/rest/v1/profiles?select=id,display_name,last_seen,track_km,outside,charges_access&role=eq.driver&order=display_name');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json(), now = Date.now();
     const on = r => r.last_seen && now - new Date(r.last_seen).getTime() < ONLINE_MS;
@@ -2196,8 +2213,8 @@ async function loadDrivers() {
     const n = rows.filter(on).length;
     $('#cnt-online').hidden = !n; $('#cnt-online').textContent = n;
     $('#drvSummary').textContent = n + ' online · ' + (rows.length - n) + ' offline';
-    $('#drvMsg').hidden = true; window.__kmDrivers = rows.filter(r => r.track_km); loadKmReport();
-    $('#drvList').innerHTML = rows.length ? rows.map(r => `<li class="drv ${on(r) ? 'on' : ''}"><span class="led"></span><div><div class="nm">${esc(r.display_name)}</div><div class="st">${on(r) ? '● Online now' : esc(agoText(r.last_seen))}</div></div><button class="tgl ${r.track_km ? 'on' : ''}" data-kmsw="${r.id}" data-on="${r.track_km ? 1 : 0}" type="button">Km ${r.track_km ? 'ON' : 'OFF'}</button></li>`).join('')
+    $('#drvMsg').hidden = true; window.__kmDrivers = rows.filter(r => r.track_km); window.__outDrivers = rows.filter(r => r.outside); loadKmReport(); loadChgReport();
+    $('#drvList').innerHTML = rows.length ? rows.map(r => `<li class="drv ${on(r) ? 'on' : ''}"><span class="led"></span><div><div class="nm">${esc(r.display_name)}</div><div class="st">${on(r) ? '● Online now' : esc(agoText(r.last_seen))}</div></div><div class="tgw"><button class="tgl ${r.track_km ? 'on' : ''}" data-kmsw="${r.id}" data-on="${r.track_km ? 1 : 0}" type="button">Km ${r.track_km ? 'ON' : 'OFF'}</button><button class="tgl ${r.outside ? 'on' : ''}" data-flag="outside" data-drv="${r.id}" data-on="${r.outside ? 1 : 0}" type="button">Outside ${r.outside ? 'ON' : 'OFF'}</button><button class="tgl ${r.charges_access ? 'on' : ''}" data-flag="charges_access" data-drv="${r.id}" data-on="${r.charges_access ? 1 : 0}" type="button">Charges ${r.charges_access ? 'ON' : 'OFF'}</button></div></li>`).join('')
       : '<li class="empty">No drivers yet.</li>';
   } catch (e) { $('#drvMsg').hidden = false; $('#drvMsg').textContent = 'Could not load drivers. Check the one-time Supabase step (last_seen) was run.'; }
 }
@@ -2216,7 +2233,7 @@ function startApp() {
   App.role = session.role;
   document.body.classList.remove('booting');
   if (App.role === 'driver') {
-    document.body.classList.add('driver');
+    document.body.classList.add('driver'); document.body.classList.toggle('chg', !!session.charges);
     openEditor(null);
     Outbox.open().then(() => syncOutbox());
     setInterval(() => { if (!document.hidden) syncOutbox(); }, 30000);
@@ -2527,7 +2544,7 @@ async function loadTop() {
 }
 function renderTop(list) {
   const adm = App.role === 'admin', medal = i => ['🥇', '🥈', '🥉'][i] || i + 1;
-  const row = (x, i) => { const max = Math.max(1, list[0].done); return `<div class="top ${i === 0 && x.done ? 'first' : ''} ${session && x.driver_name === session.name ? 'me' : ''}"><span class="rk">${medal(i)}</span><b>${esc(x.driver_name)}${adm ? `<small>${x.done} of ${x.total} · ${Math.round(x.done / x.total * 100)}%</small>` : ''}</b><span class="bar"><i style="width:${Math.round(x.done / max * 100)}%"></i></span><em>${x.done}</em></div>`; };
+  const row = (x, i) => { const max = Math.max(1, list[0].done); return `<div class="top ${i === 0 && x.done ? 'first' : ''} ${session && x.driver_name === session.name ? 'me' : ''}"><span class="rk">${medal(i)}</span><b><span class="nmc">${esc(x.driver_name)}</span>${adm ? `<small>${x.done} of ${x.total} · ${Math.round(x.done / x.total * 100)}%</small>` : ''}</b><span class="bar"><i style="width:${Math.round(x.done / max * 100)}%"></i></span><em>${x.done}</em></div>`; };
   let html;
   if (!list) html = '<div class="m">Could not load. Needs internet.</div>';
   else if (!list.length) html = '<div class="m">No orders this week yet.</div>';
@@ -2697,7 +2714,7 @@ function kmCsv() {
 document.addEventListener('change', e => { if (e.target.id === 'kmFrom' || e.target.id === 'kmTo') loadKmReport(); });
 
 /* =============== driver tabs, My PODs, change requests =============== */
-const DTAB_TITLE = {orders: 'Orders', upload: 'Upload POD', mypods: 'My PODs', top: 'Top drivers'};
+const DTAB_TITLE = {orders: 'Orders', upload: 'Upload POD', mypods: 'My PODs', top: 'Top drivers', charges: 'Charges'};
 let Dtab = 'orders';
 const dtabTitle = () => DTAB_TITLE[Dtab] || 'Upload POD';
 function setDTab(t) {
@@ -2705,7 +2722,7 @@ function setDTab(t) {
   document.querySelectorAll('#dnav [data-dtab]').forEach(b => b.classList.toggle('on', b.dataset.dtab === t));
   if (App.role === 'driver') $('#edTitle').textContent = dtabTitle();
   const body = document.querySelector('#editor .body'); if (body) body.scrollTop = 0; window.scrollTo(0, 0);
-  if (t === 'mypods') loadMyPods(); if (t === 'top') loadTop(); if (t === 'orders') { loadTrip(); loadKm(); }
+  if (t === 'mypods') loadMyPods(); if (t === 'top') loadTop(); if (t === 'charges') { Chg.open = null; loadChg(); } if (t === 'orders') { loadTrip(); loadKm(); }
 }
 document.addEventListener('click', e => { const b = e.target.closest('#dnav [data-dtab]'); if (b) setDTab(b.dataset.dtab); });
 function navBadges() {
@@ -2803,6 +2820,105 @@ async function replaceFlow(inv, pages) {
   } catch (x) { toast(x.message && !(x instanceof NetError) ? x.message : netMsg(x), true); return; }
   Replace = null; startReplaceBanner(); closeEditor(true); setDTab('mypods'); toast(inv + ' replaced ✓'); loadTrip(); loadTop();
 }
+/* =============== outside-vehicle charges =============== */
+const fmtAmt = n => Number(n || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+const DELIVERED = ['complete', 'pod_pending', 'handed_over'];
+const shiftDay = (k, n) => { const [y, m, d] = k.split('-').map(Number); return dateKey(new Date(y, m - 1, d + n)); };
+const dayLabel = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'}); };
+async function chgRpc(name, args) {
+  const res = await api('/rest/v1/rpc/' + name, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(args)});
+  if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { const j = await res.json(); if (j.message) m = j.message; } catch (e) {} throw new Error(m); }
+  return res.json();
+}
+const Chg = {date: dateKey(), rows: [], open: null, loading: false};
+const chgTotal = r => (r.orders || []).filter(o => DELIVERED.includes(o.status)).reduce((t, o) => t + Number(o.amount || 0), 0) + Number(r.labour || 0) + Number(r.return_charge || 0);
+async function loadChg() {
+  if (!session || !session.charges) return;
+  try { Chg.rows = await chgRpc('charges_day', {p_date: Chg.date}); } catch (e) { toast(netMsg(e), true); Chg.rows = Chg.rows || []; }
+  if (Chg.open && !Chg.rows.find(r => r.driver_id === Chg.open)) Chg.open = null;
+  renderChg();
+}
+function chgNav() { return `<div class="chgnav"><button type="button" id="chgPrev" aria-label="Previous day">‹</button><b>${esc(dayLabel(Chg.date))}${Chg.date === dateKey() ? ' · Today' : ''}</b><button type="button" id="chgNext" aria-label="Next day">›</button></div>`; }
+function renderChg() {
+  const c = $('#chgBody'); if (!c) return;
+  const r = Chg.open && Chg.rows.find(x => x.driver_id === Chg.open);
+  if (r) return renderChgOne(c, r);
+  const all = Chg.rows.reduce((t, x) => t + (x.saved ? chgTotal(x) : 0), 0);
+  c.innerHTML = chgNav() + (Chg.rows.length ? Chg.rows.map(x => {
+    const del = x.orders.filter(o => DELIVERED.includes(o.status)).length, ret = x.orders.filter(o => o.status === 'returned').length, open = x.orders.length - del - ret;
+    return `<button type="button" class="chgv" data-chgv="${x.driver_id}"><div><b class="nmc">${esc(x.name)}</b><div class="m">${esc([x.vehicle_type, x.vehicle].filter(Boolean).join(' · ') || 'Vehicle')} · ${x.orders.length} order${x.orders.length === 1 ? '' : 's'}${ret ? ' · ' + ret + ' returned' : ''}${open ? ' · ' + open + ' not delivered yet' : ''}</div></div><span class="pill ${x.saved ? 'ok' : ''}">${x.saved ? 'Done · ' + fmtAmt(chgTotal(x)) : 'Pending'}</span></button>`;
+  }).join('') + `<div class="chgall"><span>Day total · all vehicles</span><b>AED ${fmtAmt(all)}</b></div>` : '<div class="empty" style="padding:18px 4px">No outside vehicle orders on this day.</div>');
+}
+function renderChgOne(c, r) {
+  const del = r.orders.filter(o => DELIVERED.includes(o.status)), ret = r.orders.filter(o => o.status === 'returned'), pend = r.orders.filter(o => !DELIVERED.includes(o.status) && o.status !== 'returned');
+  c.innerHTML = `<button type="button" class="btn sm" id="chgBack">‹ All vehicles</button>
+  <div style="margin:10px 0 2px"><b class="nmc" style="font-size:19px">${esc(r.name)}</b><div class="m">${esc([r.vehicle_type, r.vehicle].filter(Boolean).join(' · '))} · ${esc(dayLabel(Chg.date))}</div></div>
+  <div class="chgh">Delivered (${del.length})</div>
+  ${del.length ? del.map(o => `<div class="cr"><span>${esc(o.customer || o.so_no)}<small>${esc(o.so_no || '')}</small></span><input class="cin" data-o="${o.id}" inputmode="decimal" placeholder="0" value="${o.amount == null ? '' : o.amount}"></div>`).join('') : '<div class="m">No delivered orders yet.</div>'}
+  ${ret.length ? `<div class="chgh">Returned (${ret.length})</div>` + ret.map(o => `<div class="cr"><span>${esc(o.customer || o.so_no)}<small>${esc(o.so_no || '')}</small></span><em class="m">↩ Returned</em></div>`).join('') : ''}
+  ${pend.length ? `<div class="chgh">Not delivered yet (${pend.length})</div>` + pend.map(o => `<div class="cr"><span>${esc(o.customer || o.so_no)}<small>${esc(o.so_no || '')} · ${esc(stOf(o).t)}</small></span></div>`).join('') : ''}
+  <div class="chgh">Vehicle charges (once for the day)</div>
+  <div class="cr"><span>Labour</span><input class="cin" id="chgLab" inputmode="decimal" placeholder="0" value="${r.labour || ''}"></div>
+  <div class="cr"><span>Return charge<small>one charge for all returns</small></span><input class="cin" id="chgRet" inputmode="decimal" placeholder="0" value="${r.return_charge || ''}"></div>
+  <div class="chgall"><span>Total (AED)</span><b id="chgTot">0</b></div>
+  <button class="btn primary main" id="chgSave" type="button">Save</button>`;
+  chgLive();
+}
+const numOf = el => { const v = parseFloat(String(el && el.value || '').replace(',', '.')); return isFinite(v) && v > 0 ? v : 0; };
+function chgLive() { const t = $('#chgTot'); if (!t) return; let s = numOf($('#chgLab')) + numOf($('#chgRet')); document.querySelectorAll('#chgBody [data-o]').forEach(i => { s += numOf(i); }); t.textContent = fmtAmt(s); }
+document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('cin')) chgLive(); });
+document.addEventListener('click', async e => {
+  const t = e.target;
+  try {
+    const v = t.closest('[data-chgv]');
+    if (v) { Chg.open = v.dataset.chgv; renderChg(); window.scrollTo(0, 0); }
+    else if (t.id === 'chgBack') { Chg.open = null; await loadChg(); }
+    else if (t.id === 'chgPrev' || t.id === 'chgNext') { Chg.date = shiftDay(Chg.date, t.id === 'chgPrev' ? -1 : 1); Chg.open = null; await loadChg(); }
+    else if (t.id === 'chgSave') {
+      const r = Chg.rows.find(x => x.driver_id === Chg.open); if (!r) return;
+      const orders = [...document.querySelectorAll('#chgBody [data-o]')].map(i => ({id: i.dataset.o, amount: numOf(i)}));
+      t.disabled = true; await chgRpc('charges_save', {p_date: Chg.date, p_driver: r.driver_id, p_labour: numOf($('#chgLab')), p_return: numOf($('#chgRet')), p_orders: orders});
+      toast('Saved ✓'); Chg.open = null; await loadChg();
+    }
+    else if (t.closest('[data-flag]')) {
+      const b = t.closest('[data-flag]'), on = b.dataset.on !== '1';
+      await rpc('admin_set_flag', {p_driver: b.dataset.drv, p_flag: b.dataset.flag, p_on: on}); toast((b.dataset.flag === 'outside' ? 'Outside vehicle ' : 'Charges access ') + (on ? 'ON' : 'OFF')); await loadDrivers();
+    }
+    else if (t.id === 'chgCsv') chgCsv();
+    else if (t.closest('[data-chgr]')) {
+      const m = t.closest('[data-chgr]').dataset.chgr, n = new Date(), f = dateKey;
+      if (m === 'week') { $('#chgFrom').value = f(new Date(Date.now() - 6 * 86400000)); $('#chgTo').value = f(); }
+      else if (m === 'month') { $('#chgFrom').value = f(new Date(n.getFullYear(), n.getMonth(), 1)); $('#chgTo').value = f(); }
+      else { $('#chgFrom').value = f(new Date(n.getFullYear(), n.getMonth() - 1, 1)); $('#chgTo').value = f(new Date(n.getFullYear(), n.getMonth(), 0)); }
+      await loadChgReport();
+    }
+  } catch (x) { toast(netMsg(x), true); const b = $('#chgSave'); if (b) b.disabled = false; }
+});
+
+/* ---- admin: report ---- */
+const ChgA = {rows: []};
+async function loadChgReport() {
+  const box = $('#chgBox'); if (!box || !session || session.demo) return;
+  const outs = window.__outDrivers || [];
+  box.hidden = !outs.length && !ChgA.rows.length; if (!outs.length) return;
+  const fi = $('#chgFrom'), ti = $('#chgTo');
+  if (!fi.value) { const n = new Date(); fi.value = dateKey(new Date(n.getFullYear(), n.getMonth(), 1)); ti.value = dateKey(); }
+  try { ChgA.rows = await chgRpc('charges_report', {p_from: fi.value, p_to: ti.value}); box.hidden = false; renderChgReport(); } catch (e) { box.hidden = true; }
+}
+const chgRowTotal = r => Number(r.delivery) + Number(r.labour) + Number(r.return_charge);
+function renderChgReport() {
+  const box = $('#chgBox'), rows = ChgA.rows; if (!box) return;
+  const sum = k => rows.reduce((t, r) => t + Number(r[k] || 0), 0), all = rows.reduce((t, r) => t + chgRowTotal(r), 0);
+  const by = {}; rows.forEach(r => { const o = by[r.name] = by[r.name] || {t: 0, d: 0}; o.t += chgRowTotal(r); o.d++; });
+  box.querySelector('.chgtot').innerHTML = rows.length ? `<div class="chgbig">AED ${fmtAmt(all)}</div><div class="m">Delivery ${fmtAmt(sum('delivery'))} · Labour ${fmtAmt(sum('labour'))} · Returns ${fmtAmt(sum('return_charge'))}</div><div style="margin-top:8px">` + Object.entries(by).sort((a, b) => b[1].t - a[1].t).map(([n, o]) => `<span class="k un nmc">${esc(n)}: ${fmtAmt(o.t)} · ${o.d} day${o.d > 1 ? 's' : ''}</span>`).join(' ') + '</div>' : '';
+  box.querySelector('.chgrows').innerHTML = rows.length ? rows.map(r => `<div class="kmrow"><div><b class="nmc">${esc(r.name)}</b> <span class="m">${esc(r.day)}${r.vehicle ? ' · ' + esc(r.vehicle) : ''}</span><div class="m">${r.delivered} delivered · ${r.returned} returned · labour ${fmtAmt(r.labour)} · return ${fmtAmt(r.return_charge)}</div></div><div class="kmv">${fmtAmt(chgRowTotal(r))}</div></div>`).join('') : '<div class="m" style="margin-top:8px">No saved charges in this period.</div>';
+}
+function chgCsv() {
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const lines = [['Date', 'Driver', 'Vehicle', 'Delivered', 'Returned', 'Delivery charges', 'Labour', 'Return charge', 'Total'].map(q).join(',')].concat(ChgA.rows.map(r => [r.day, r.name, r.vehicle, r.delivered, r.returned, r.delivery, r.labour, r.return_charge, chgRowTotal(r)].map(q).join(',')));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv'})); a.download = 'Outside_charges_' + $('#chgFrom').value + '_to_' + $('#chgTo').value + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+}
+document.addEventListener('change', e => { if (e.target.id === 'chgFrom' || e.target.id === 'chgTo') loadChgReport(); });
 /* =====================================================================
    Boot
    ===================================================================== */
