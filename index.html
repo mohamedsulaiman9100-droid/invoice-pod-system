@@ -456,6 +456,10 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
 .cleanrow{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}.cleanrow select{padding:9px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px}
 .warncard{border:1.5px solid #f0b429;background:rgba(240,180,41,.12)}body.driver[data-dtab="orders"] #podWarn:not([hidden]){display:block!important}
 #dnUp{position:absolute;top:4px;right:calc(50% - 26px);background:#e5484d;color:#fff;border-radius:99px;font-size:11px;min-width:18px;padding:1px 5px;text-align:center}#dnUp[hidden]{display:none}
+
+/* merchandiser */
+.tgw{display:grid;grid-template-columns:1fr 1fr;gap:6px}.drv .tgw .tgl{font-size:12.5px;white-space:nowrap}
+.picklist{display:grid;gap:8px;max-height:50vh;overflow:auto}.pickp{appearance:none;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px;font:inherit;font-size:16px;cursor:pointer}
 </style>
 </head>
 <body class="booting">
@@ -1893,11 +1897,11 @@ async function signIn(user, pass) {
   const j = await res.json();
   const s = {access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (j.expires_in || 3600) * 1000, uid: j.user.id, role: null, name: null};
   let pr;
-  try { pr = await fetch(CFG.url + '/rest/v1/profiles?select=role,display_name,charges_access&id=eq.' + s.uid, {headers: {apikey: CFG.key, Authorization: 'Bearer ' + s.access}}); }
+  try { pr = await fetch(CFG.url + '/rest/v1/profiles?select=role,display_name,charges_access,merchant&id=eq.' + s.uid, {headers: {apikey: CFG.key, Authorization: 'Bearer ' + s.access}}); }
   catch (e) { throw new Error('No internet. Connect and try again.'); }
   const rows = pr.ok ? await pr.json() : [];
   if (!rows.length) throw new Error('This login is not set up yet. Ask your admin.');
-  s.role = rows[0].role; s.name = rows[0].display_name || String(user).trim(); s.charges = !!rows[0].charges_access;
+  s.role = rows[0].role; s.name = rows[0].display_name || String(user).trim(); s.charges = !!rows[0].charges_access; s.merchant = !!rows[0].merchant;
   session = s; saveSession();
 }
 async function signOut() {
@@ -1907,11 +1911,11 @@ async function signOut() {
 }
 async function verifyRole() {      // catches a removed login or a changed role
   try {
-    const res = await api('/rest/v1/profiles?select=role,display_name,charges_access&id=eq.' + session.uid);
+    const res = await api('/rest/v1/profiles?select=role,display_name,charges_access,merchant&id=eq.' + session.uid);
     if (!res.ok) return;
     const rows = await res.json();
     if (!rows.length) { await signOut(); return; }
-    if (rows[0].role !== session.role || !!rows[0].charges_access !== !!session.charges) { session.charges = !!rows[0].charges_access; session.role = rows[0].role; session.name = rows[0].display_name || session.name; saveSession(); location.reload(); }
+    if (rows[0].role !== session.role || !!rows[0].charges_access !== !!session.charges || !!rows[0].merchant !== !!session.merchant) { session.charges = !!rows[0].charges_access; session.merchant = !!rows[0].merchant; session.role = rows[0].role; session.name = rows[0].display_name || session.name; saveSession(); location.reload(); }
   } catch (e) {}
 }
 
@@ -2245,7 +2249,7 @@ function agoText(t) {
 }
 async function loadDrivers() {
   try {
-    const res = await api('/rest/v1/profiles?select=id,display_name,last_seen,track_km,outside,charges_access&role=eq.driver&order=display_name');
+    const res = await api('/rest/v1/profiles?select=id,display_name,last_seen,track_km,outside,charges_access,merchant&role=eq.driver&order=display_name');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json(), now = Date.now();
     const on = r => r.last_seen && now - new Date(r.last_seen).getTime() < ONLINE_MS;
@@ -2254,7 +2258,7 @@ async function loadDrivers() {
     $('#cnt-online').hidden = !n; $('#cnt-online').textContent = n;
     $('#drvSummary').textContent = n + ' online · ' + (rows.length - n) + ' offline';
     $('#drvMsg').hidden = true; window.__kmDrivers = rows.filter(r => r.track_km); window.__outDrivers = rows.filter(r => r.outside); loadKmReport(); loadChgReport();
-    $('#drvList').innerHTML = rows.length ? rows.map(r => `<li class="drv ${on(r) ? 'on' : ''}"><span class="led"></span><div><div class="nm">${esc(r.display_name)}</div><div class="st">${on(r) ? '● Online now' : esc(agoText(r.last_seen))}</div></div><div class="tgw"><button class="tgl ${r.track_km ? 'on' : ''}" data-kmsw="${r.id}" data-on="${r.track_km ? 1 : 0}" type="button">Km ${r.track_km ? 'ON' : 'OFF'}</button><button class="tgl ${r.outside ? 'on' : ''}" data-flag="outside" data-drv="${r.id}" data-on="${r.outside ? 1 : 0}" type="button">Outside ${r.outside ? 'ON' : 'OFF'}</button><button class="tgl ${r.charges_access ? 'on' : ''}" data-flag="charges_access" data-drv="${r.id}" data-on="${r.charges_access ? 1 : 0}" type="button">Charges ${r.charges_access ? 'ON' : 'OFF'}</button></div></li>`).join('')
+    $('#drvList').innerHTML = rows.length ? rows.map(r => `<li class="drv ${on(r) ? 'on' : ''}"><span class="led"></span><div><div class="nm">${esc(r.display_name)}</div><div class="st">${on(r) ? '● Online now' : esc(agoText(r.last_seen))}</div></div><div class="tgw"><button class="tgl ${r.track_km ? 'on' : ''}" data-kmsw="${r.id}" data-on="${r.track_km ? 1 : 0}" type="button">Km ${r.track_km ? 'ON' : 'OFF'}</button><button class="tgl ${r.outside ? 'on' : ''}" data-flag="outside" data-drv="${r.id}" data-on="${r.outside ? 1 : 0}" type="button">Outside ${r.outside ? 'ON' : 'OFF'}</button><button class="tgl ${r.charges_access ? 'on' : ''}" data-flag="charges_access" data-drv="${r.id}" data-on="${r.charges_access ? 1 : 0}" type="button">Charges ${r.charges_access ? 'ON' : 'OFF'}</button><button class="tgl ${r.merchant ? 'on' : ''}" data-flag="merchant" data-drv="${r.id}" data-on="${r.merchant ? 1 : 0}" type="button">Merchandiser ${r.merchant ? 'ON' : 'OFF'}</button></div></li>`).join('')
       : '<li class="empty">No drivers yet.</li>';
   } catch (e) { $('#drvMsg').hidden = false; $('#drvMsg').textContent = 'Could not load drivers. Check the one-time Supabase step (last_seen) was run.'; }
 }
@@ -2362,7 +2366,8 @@ const kchip = r => { const s = stOf(r); return `<span class="k ${s.k}">${s.t}</s
 const bucketOf = r => r.status === 'returned' ? (r.hub_received_at ? 'closed' : 'returned') : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
-  returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone'};
+  returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone',
+  to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
 const evTime = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'), hm = p(d.getHours()) + ':' + p(d.getMinutes()); return dateKey(d) === dateKey() ? hm : d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + hm; };
 function stackBar(list) {
   const n = list.length || 1, c = f => list.filter(f).length;
@@ -2381,30 +2386,40 @@ async function loadTrip() {
   if (!session || App.role !== 'driver' || session.demo) return;
   const from = dateKey(new Date(Date.now() - 7 * 86400000));
   try {
-    const res = await api('/rest/v1/assignments?select=id,work_date,so_no,customer,inv_no,status,handed_to,note,hub_received_at,vehicle&driver_id=eq.' + session.uid + '&work_date=gte.' + from + '&order=work_date.desc,so_no.asc');
+    const res = await api('/rest/v1/rpc/my_trip', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({p_from: from})});
     if (!res.ok) throw new Error('HTTP ' + res.status);
     Trip.rows = await res.json(); Trip.loaded = true; LS.set('pod.trip.' + session.uid, JSON.stringify(Trip.rows));
   } catch (e) { if (!Trip.loaded) { try { Trip.rows = JSON.parse(LS.get('pod.trip.' + session.uid) || '[]'); } catch (x) { Trip.rows = []; } } }
   renderTrip(); navBadges();
 }
 const ORDER = {assigned: 0, out: 1, pod_pending: 2, handed_over: 3, returned: 3, complete: 4};
+const isAway = r => session && r.driver_id && r.driver_id !== session.uid;
 function tripVisible() { const today = dateKey(); return Trip.rows.filter(r => r.work_date === today || ['assigned', 'out', 'pod_pending'].includes(r.status)).sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9)); }
 function tripCard(r) {
+  if (isAway(r)) return `<div class="cc" style="--rail:var(--blue)"><span class="k hm">Handed to ${esc(r.driver_name || '')}</span><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div><div class="m">Now with <b class="nmc">${esc(r.driver_name || '')}</b> · ${esc(stOf(r).t)}</div></div>`;
   const rail = {assigned: 'var(--brass)', out: 'var(--blue)', pod_pending: 'var(--brass)', complete: 'var(--closed)', handed_over: 'var(--blue)', returned: 'var(--danger)'}[r.status];
-  const chip = r.status === 'assigned' ? '<span class="k as">To pick</span>' : kchip(r);
+  let chipx = '';
+  const chip0 = r.status === 'assigned' ? '<span class="k as">To pick</span>' : kchip(r);
   let acts = '', extra = '';
   if (r.status === 'assigned' && kmLocked()) acts = '<div class="m">🔒 Start your day (enter km) first</div>';
   else if (r.status === 'assigned') acts = `<div class="two"><button class="btn primary" data-tact="pick" data-id="${r.id}" type="button">Picked</button><button class="btn" data-tact="np" data-id="${r.id}" type="button">Not picked</button></div>`;
-  else if (r.status === 'out') acts = `<button class="btn primary main" data-tact="deliv" data-id="${r.id}" type="button">Delivered</button><div class="two"><button class="btn ghost" data-tact="hand" data-id="${r.id}" type="button">Handed to merchandiser</button><button class="btn ghost" data-tact="ret" data-id="${r.id}" type="button">Return to hub</button></div>`;
+  else if (r.status === 'out' && r.return_from) { chipx = `<span class="k rt">↩ Return from ${esc(r.return_from)}</span>`; extra = `<div class="m">Collect it from <b class="nmc">${esc(r.return_from)}</b> and take it to the hub.</div>`; acts = `<button class="btn primary main" data-tact="ret" data-id="${r.id}" type="button">Return to hub</button><button class="linkbtn" data-tact="unrecv" data-id="${r.id}" type="button">Not with me</button>`; }
+  else if (r.status === 'out') {
+    const m = session.merchant, back = r.prev_holder_id ? `<button class="linkbtn" data-tact="unrecv" data-id="${r.id}" type="button">Not with me</button>` : '';
+    acts = `<button class="btn primary main" data-tact="deliv" data-id="${r.id}" type="button">Delivered</button><div class="two">` + (m
+      ? `<button class="btn ghost" data-tact="rethand" data-id="${r.id}" type="button">Can't deliver · hand to a driver</button>`
+      : `<button class="btn ghost" data-tact="hand" data-id="${r.id}" type="button">Handed to merchandiser</button><button class="btn ghost" data-tact="ret" data-id="${r.id}" type="button">Return to hub</button>`) + '</div>' + back;
+  }
   else if (r.status === 'pod_pending') acts = `<button class="btn main brassbtn" data-tact="upload" data-id="${r.id}" type="button">📷 Upload POD now</button><button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`;
   else if (r.status === 'handed_over') { extra = `<div class="m">Handed to: ${esc(r.handed_to || '')}</div>`; if (!r.hub_received_at) acts = `<button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`; }
   else if (r.status === 'returned') { extra = `<div class="m">Returned: ${esc(r.note || '')}${r.hub_received_at ? ' · received at hub' : ''}</div>`; if (!r.hub_received_at) acts = `<button class="linkbtn" data-tact="undo" data-id="${r.id}" type="button">Undo</button>`; }
+  const chip = chipx || chip0;
   return `<div class="cc" style="--rail:${rail}">${chip}<div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div>${extra}${acts}</div>`;
 }
 function renderTrip() {
   const card = $('#cardTrip'); if (!card) return;
   const vis = tripVisible(); card.hidden = !vis.length;
-  const done = vis.filter(r => ['complete', 'handed_over', 'returned'].includes(r.status)).length;
+  const done = vis.filter(r => ['complete', 'handed_over', 'returned'].includes(r.status) || (isAway(r) && r.status !== 'returned')).length;
   $('#tripCount').textContent = vis.length ? `${done} of ${vis.length} done` : '';
   $('#tripBar').innerHTML = vis.length ? stackBar(vis) : '';
   $('#tripList').innerHTML = vis.map(tripCard).join('');
@@ -2412,11 +2427,23 @@ function renderTrip() {
 const NP_REASONS = ['Not in schedule', 'Area not covered', 'Stock not ready', 'Other'], RET_REASONS = ['Customer closed', 'Customer refused', 'Wrong / damaged item', 'Could not reach customer', 'Other'];
 function openTripSheet(kind, row) {
   Trip.sheet = {kind, row, reason: kind === 'np' ? NP_REASONS[0] : RET_REASONS[0]};
+  $('#tsOk').hidden = false;
+  if (kind === 'hand' || kind === 'rethand') return openPickSheet(kind, row);
   $('#tsTitle').textContent = kind === 'hand' ? 'Handed to merchandiser' : kind === 'np' ? 'Why not picked?' : 'Return to hub';
   const reasons = kind === 'np' ? NP_REASONS : RET_REASONS;
   $('#tsBody').innerHTML = (kind === 'hand' ? '<input id="tsText" placeholder="Merchandiser / salesman name" autocomplete="off">'
     : `<div class="rs" id="tsReasons">${reasons.map((x, i) => `<button type="button" class="${i ? '' : 'on'}" data-reason="${esc(x)}">${esc(x)}</button>`).join('')}</div><input id="tsText" placeholder="Note (optional)" autocomplete="off">`);
   $('#tripSheet').hidden = false; if (kind === 'hand') setTimeout(() => $('#tsText').focus(), 50);
+}
+async function openPickSheet(kind, row) {
+  $('#tsTitle').textContent = kind === 'hand' ? 'Handed to which merchandiser?' : 'Hand the return to which driver?';
+  $('#tsBody').innerHTML = '<div class="m">Loading…</div>'; $('#tsOk').hidden = true; $('#tripSheet').hidden = false;
+  let list = [];
+  try { const res = await api('/rest/v1/rpc/handover_targets', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({p_kind: kind === 'hand' ? 'merchant' : 'driver'})}); if (!res.ok) throw 0; list = await res.json(); } catch (e) { $('#tsBody').innerHTML = '<div class="m">Could not load the list. Check your internet.</div>'; return; }
+  if (!list.length && kind === 'hand') {     // no merchandiser accounts yet: old free-text hand over
+    Trip.sheet.kind = 'handtxt'; $('#tsOk').hidden = false; $('#tsBody').innerHTML = '<input id="tsText" placeholder="Merchandiser / salesman name" autocomplete="off">'; return;
+  }
+  $('#tsBody').innerHTML = list.length ? '<div class="picklist">' + list.map(x => `<button type="button" class="pickp" data-pick="${x.id}" data-name="${esc(x.name)}"><b class="nmc">${esc(x.name)}</b></button>`).join('') + '</div>' : '<div class="m">No driver available.</div>';
 }
 async function afterDeliveredPrompt(row) {
   if (row.so_no && typeof applyNumber === 'function') applyNumber(row.so_no.replace(/\D/g, '').slice(-NUM_LEN));
@@ -2431,6 +2458,7 @@ document.addEventListener('click', async e => {
   const act = b.dataset.tact;
   try {
     if (act === 'upload') await afterDeliveredPrompt(row);
+    else if (act === 'unrecv') { await rpc('driver_unreceive', {p_id: row.id}); toast('Sent back ✓'); await loadTrip(); }
     else if (act === 'pick') { await rpc('driver_pick', {p_id: row.id, p_ok: true, p_text: ''}); toast('Out for delivery ✓'); await loadTrip(); }
     else if (act === 'deliv') { await rpc('driver_mark', {p_id: row.id, p_status: 'pod_pending', p_text: ''}); await loadTrip(); toast('Delivered. Now upload the POD'); await afterDeliveredPrompt(row); }
     else if (act === 'undo') { await rpc('driver_mark', {p_id: row.id, p_status: 'out', p_text: ''}); await loadTrip(); }
@@ -2438,11 +2466,15 @@ document.addEventListener('click', async e => {
   } catch (x) { toast(netMsg(x), true); }
 });
 document.addEventListener('click', async e => {
+  const pk = e.target.closest('[data-pick]');
+  if (pk && Trip.sheet) { try { await rpc('driver_handover', {p_id: Trip.sheet.row.id, p_to: pk.dataset.pick}); $('#tripSheet').hidden = true; toast((Trip.sheet.kind === 'hand' ? 'Handed to ' : 'Return handed to ') + pk.dataset.name + ' ✓'); await loadTrip(); } catch (x) { toast(netMsg(x), true); } return; }
+});
+document.addEventListener('click', async e => {
   if (e.target.id === 'tsCancel') { $('#tripSheet').hidden = true; return; }
   if (e.target.id !== 'tsOk' || !Trip.sheet) return;
   const {kind, row, reason} = Trip.sheet, t = ($('#tsText').value || '').trim();
   try {
-    if (kind === 'hand') { if (!t) { toast('Enter the name of who took it', true); return; } await rpc('driver_mark', {p_id: row.id, p_status: 'handed_over', p_text: t}); }
+    if (kind === 'hand' || kind === 'handtxt') { if (!t) { toast('Enter the name of who took it', true); return; } await rpc('driver_mark', {p_id: row.id, p_status: 'handed_over', p_text: t}); }
     else if (kind === 'ret') await rpc('driver_mark', {p_id: row.id, p_status: 'returned', p_text: reason + (t ? ' - ' + t : '')});
     else await rpc('driver_pick', {p_id: row.id, p_ok: false, p_text: reason + (t ? ' - ' + t : '')});
     $('#tripSheet').hidden = true; toast('Saved ✓'); await loadTrip();
@@ -2481,7 +2513,7 @@ function renderOrders() {
   const vis = ordShown();
   $('#ordList').innerHTML = vis.length ? vis.map(r => {
     const selectable = true;
-    const sub = r.status === 'unassigned' && r.flag === 'not_picked' ? `Not picked by ${esc(r.prev_driver || 'driver')}: ${esc(r.note || '')}` : r.driver_name ? 'Driver: ' + esc(r.driver_name) : '';
+    const sub = r.status === 'unassigned' && r.flag === 'not_picked' ? `Not picked by ${esc(r.prev_driver || 'driver')}: ${esc(r.note || '')}` : r.driver_name ? (r.handed_by && r.driver_id !== r.handed_by_id ? esc(r.handed_by) + ' → <b>' + esc(r.driver_name) + '</b> (merchandiser)' : 'Driver: ' + esc(r.driver_name)) + (r.return_from ? ' · ↩ return from ' + esc(r.return_from) : '') : '';
     return `<li class="ord" data-id="${r.id}">${selectable ? `<button class="rb ${Ord.sel.has(r.id) ? 'on' : ''}" data-osel="${r.id}" type="button" aria-label="Select"></button>` : '<span></span>'}`
       + `<div><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>${kchip(r)}</li>`;
   }).join('') : `<li class="empty">${Ord.rows.length ? 'No orders in this group.' : 'No orders for this date. Tap Upload Excel.'}</li>`;
@@ -2498,7 +2530,7 @@ async function delOrders(ids) {
 async function openOrderDetail(id) {
   const r = Ord.rows.find(x => x.id === id); if (!r) return;
   $('#ordSheet').hidden = false;
-  const facts = [r.driver_name && 'Driver: <b>' + esc(r.driver_name) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>'].filter(Boolean).join(' · ');
+  const facts = [r.driver_name && ((r.handed_by && !r.return_from ? 'With merchandiser: <b>' : r.return_from ? 'Return carried by: <b>' : 'Driver: <b>') + esc(r.driver_name) + '</b>'), r.handed_by && 'Handed over by: <b>' + esc(r.handed_by) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>'].filter(Boolean).join(' · ');
   const act = (r.status === 'returned' && !r.hub_received_at ? `<button class="btn primary main" data-hubrec="${r.id}" type="button">Received at hub</button>` : '') + `<button class="btn danger main" data-odel="${r.id}" type="button">Delete this order</button>`;
   $('#ordDetail').innerHTML = `<div class="dtitle"><div><div class="m">${esc(r.so_no)}</div><h3>${esc(r.customer || r.so_no)}</h3></div>${kchip(r)}</div>${facts ? `<div class="m" style="margin:8px 0">${facts}</div>` : ''}${act}<h4 style="margin:16px 0 10px">History</h4><div class="steps" id="ordHist"><div class="m">Loading…</div></div>`;
   try {
@@ -2932,7 +2964,7 @@ document.addEventListener('click', async e => {
     }
     else if (t.closest('[data-flag]')) {
       const b = t.closest('[data-flag]'), on = b.dataset.on !== '1';
-      await rpc('admin_set_flag', {p_driver: b.dataset.drv, p_flag: b.dataset.flag, p_on: on}); toast((b.dataset.flag === 'outside' ? 'Outside vehicle ' : 'Charges access ') + (on ? 'ON' : 'OFF')); await loadDrivers();
+      await rpc('admin_set_flag', {p_driver: b.dataset.drv, p_flag: b.dataset.flag, p_on: on}); toast(({outside: 'Outside vehicle ', charges_access: 'Charges access ', merchant: 'Merchandiser '})[b.dataset.flag] + (on ? 'ON' : 'OFF')); await loadDrivers();
     }
     else if (t.closest('[data-chgrow]')) { const [d, id] = t.closest('[data-chgrow]').dataset.chgrow.split('|'); Chg.date = d; Chg.open = id; await loadChg(); if (Chg.open) $('#viewCharges').scrollIntoView(); else toast('No orders for this vehicle on that day', true); }
     else if (t.id === 'chgCsv') chgCsv();
@@ -2998,6 +3030,7 @@ function renderDash() {
   let h = `<div class="dtiles">${tile(d.total, 'Orders today', '', 'orders')}${tile(n('complete') + n('handed_over'), 'Done', 'ok', 'orders')}${tile(n('assigned') + n('out'), 'Still out', '', 'orders')}${tile(d.missing.length, 'POD missing', d.missing.length ? (late ? 'bad' : 'warn') : 'ok')}${tile(n('returned'), 'Returned', n('returned') ? 'warn' : '', 'orders')}${tile(d.unassigned_all, 'Unassigned', d.unassigned_all ? 'warn' : '', 'orders')}</div>`;
   h += `<div class="dlinks"><button type="button" class="chgv" data-dgo="inbox"><div><b>PODs to download</b><div class="m">${d.new_uploads} new · ${d.uploads_today} uploaded today${d.not_assigned ? ' · ' + d.not_assigned + ' not assigned' : ''}</div></div><span class="pill ${d.new_uploads ? '' : 'ok'}">${d.new_uploads}</span></button>
   <button type="button" class="chgv" data-dgo="drivers"><div><b>Drivers online</b><div class="m">${d.online} of ${d.drivers_total} using the app right now</div></div><span class="pill ${d.online ? 'ok' : ''}">${d.online}</span></button></div>`;
+  if ((d.with_merch || []).length) h += `<h3 class="dh">With merchandisers <span class="m">· waiting for POD or return</span></h3>` + d.with_merch.map(w => `<div class="mrow ${w.days >= 3 ? 'late' : ''}"><div><b class="nmc">${esc(w.name)}</b><div class="m">${w.n} order${w.n > 1 ? 's' : ''}${w.returns ? ' · ' + w.returns + ' return' + (w.returns > 1 ? 's' : '') : ''}</div></div><span class="pill ${w.days >= 3 ? 'bad' : w.days >= 1 ? 'warn' : ''}">${w.days <= 0 ? 'today' : w.days + ' day' + (w.days > 1 ? 's' : '')}</span></div>`).join('');
   h += `<h3 class="dh">Drivers today</h3>` + (d.drivers.length ? d.drivers.map(x => { const done = x.complete + x.handed_over; return `<div class="drow"><div><b class="nmc">${esc(x.name)}</b><div class="m">${done} of ${x.total} done${x.open ? ' · ' + x.open + ' still out' : ''}${x.returned ? ' · ' + x.returned + ' returned' : ''}</div><div class="stack"><i class="s-delivered" style="width:${done / x.total * 100}%"></i><i class="s-out" style="width:${x.pod_pending / x.total * 100}%"></i><i class="s-returned" style="width:${x.returned / x.total * 100}%"></i></div></div>${x.pod_pending ? `<span class="pill bad">${x.pod_pending} POD missing</span>` : done === x.total ? '<span class="pill ok">All done</span>' : ''}</div>`; }).join('') : '<div class="m">No orders assigned for today.</div>');
   h += `<h3 class="dh">POD missing <span class="m">· delivered but no photo yet</span></h3>` + (d.missing.length ? d.missing.map(m => `<div class="mrow ${m.days >= 2 ? 'late' : ''}"><div><b>${esc(m.so_no)}</b> <span class="m">${esc(m.customer || '')}</span><div class="m"><span class="nmc">${esc(m.driver_name || '')}</span></div></div><span class="pill ${m.days >= 2 ? 'bad' : 'warn'}">${m.days <= 0 ? 'today' : m.days + ' day' + (m.days > 1 ? 's' : '')}</span></div>`).join('') : '<div class="m">✓ Every delivered order has its POD.</div>');
   const s = Dash.st, bk = Number(LS.get('pod.backup') || 0), bd = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
