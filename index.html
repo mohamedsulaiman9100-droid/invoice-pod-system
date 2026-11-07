@@ -514,7 +514,8 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
  </div>
 
  <div id="viewToday" hidden>
-  <div class="toolbar"><strong>Today · <span id="dashDate"></span></strong><span class="grow"></span><button class="btn" id="btnDashRef" type="button">↻ Refresh</button></div>
+  <div class="toolbar"><strong>Today · <span id="dashDate"></span></strong><span class="grow"></span><button class="btn autoBtn" type="button" data-auto="1"></button><button class="btn" id="btnDashRef" type="button">↻ Refresh</button></div>
+  <div class="autoLbl muted"></div>
   <div id="dashBody"></div>
  </div>
 
@@ -3094,6 +3095,36 @@ function podReminder() {
   const up = $('#dnUp'); if (up) { up.hidden = !n; up.textContent = n; }
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-dgoup]')) setDTab('upload'); });
+
+/* ---- admin auto refresh: every 2 minutes on Today tab only ---- */
+const Auto = {on: LS.get('pod.auto') !== '0', ms: 120000, last: null, busy: false};
+function autoUI() {
+  const t = Auto.last ? Auto.last.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+  document.querySelectorAll('.autoBtn').forEach(b => { b.textContent = Auto.on ? '⟳ Auto: ON' : '⟳ Auto: OFF'; b.setAttribute('aria-pressed', String(Auto.on)); });
+  document.querySelectorAll('.autoLbl').forEach(l => { l.textContent = (t ? 'Updated ' + t : '') + (Auto.on ? ' · refreshes every 2 min' : ' · auto-refresh off'); });
+}
+function autoSafe() {
+  if (!session || session.role !== 'admin' || session.demo || document.hidden || navigator.onLine === false) return false;
+  if (view === 'today') return true;
+  return false;
+}
+async function autoTick(force) {
+  if (Auto.busy || (!force && (!Auto.on || !autoSafe()))) return;
+  Auto.busy = true;
+  try {
+    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); renderDash(); }
+    Auto.last = new Date();
+  } catch (e) {} finally { Auto.busy = false; autoUI(); }
+}
+setInterval(() => autoTick(false), Auto.ms);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) autoTick(false); });
+addEventListener('online', () => autoTick(false));
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-auto]'); if (b) { Auto.on = !Auto.on; LS.set('pod.auto', Auto.on ? '1' : '0'); autoUI(); if (Auto.on) autoTick(false); return; }
+  if (e.target.closest && e.target.closest('#btnDashRef')) setTimeout(() => { Auto.last = new Date(); autoUI(); }, 900);
+  if (e.target.closest && e.target.closest('.vtab')) setTimeout(() => { if (!Auto.last) Auto.last = new Date(); autoUI(); }, 900);
+});
+autoUI();
 /* =====================================================================
    Boot
    ===================================================================== */
