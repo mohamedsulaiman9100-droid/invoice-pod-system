@@ -2902,6 +2902,7 @@ document.addEventListener('click', async e => {
       const b = t.closest('[data-flag]'), on = b.dataset.on !== '1';
       await rpc('admin_set_flag', {p_driver: b.dataset.drv, p_flag: b.dataset.flag, p_on: on}); toast((b.dataset.flag === 'outside' ? 'Outside vehicle ' : 'Charges access ') + (on ? 'ON' : 'OFF')); await loadDrivers();
     }
+    else if (t.closest('[data-chgrow]')) { const [d, id] = t.closest('[data-chgrow]').dataset.chgrow.split('|'); Chg.date = d; Chg.open = id; await loadChg(); if (Chg.open) $('#viewCharges').scrollIntoView(); else toast('No orders for this vehicle on that day', true); }
     else if (t.id === 'chgCsv') chgCsv();
     else if (t.id === 'btnChgRef') { Chg.open = null; await loadChg(); await loadChgReport(); toast('Refreshed'); }
     else if (t.id === 'btnKmRef') { await loadKmReport(); toast('Refreshed'); }
@@ -2931,7 +2932,7 @@ function renderChgReport() {
   const sum = k => rows.reduce((t, r) => t + Number(r[k] || 0), 0), all = rows.reduce((t, r) => t + chgRowTotal(r), 0);
   const by = {}; rows.forEach(r => { const o = by[r.name] = by[r.name] || {t: 0, d: 0}; o.t += chgRowTotal(r); o.d++; });
   box.querySelector('.chgtot').innerHTML = rows.length ? `<div class="chgbig">AED ${fmtAmt(all)}</div><div class="m">Delivery ${fmtAmt(sum('delivery'))} · Labour ${fmtAmt(sum('labour'))} · Returns ${fmtAmt(sum('return_charge'))}</div><div style="margin-top:8px">` + Object.entries(by).sort((a, b) => b[1].t - a[1].t).map(([n, o]) => `<span class="k un nmc">${esc(n)}: ${fmtAmt(o.t)} · ${o.d} day${o.d > 1 ? 's' : ''}</span>`).join(' ') + '</div>' : '';
-  box.querySelector('.chgrows').innerHTML = rows.length ? rows.map(r => `<div class="kmrow"><div><b class="nmc">${esc(r.name)}</b> <span class="m">${esc(r.day)}${r.vehicle ? ' · ' + esc(r.vehicle) : ''}</span><div class="m">${r.delivered} delivered · ${r.returned} returned · labour ${fmtAmt(r.labour)} · return ${fmtAmt(r.return_charge)}</div></div><div class="kmv">${fmtAmt(chgRowTotal(r))}</div></div>`).join('') : '<div class="m" style="margin-top:8px">No saved charges in this period.</div>';
+  box.querySelector('.chgrows').innerHTML = rows.length ? rows.map(r => `<div class="kmrow" data-chgrow="${esc(r.day)}|${r.driver_id}" style="cursor:pointer"><div><b class="nmc">${esc(r.name)}</b> <span class="m">${esc(r.day)}${r.vehicle ? ' · ' + esc(r.vehicle) : ''}</span><div class="m">${r.delivered} delivered · ${r.returned} returned · labour ${fmtAmt(r.labour)} · return ${fmtAmt(r.return_charge)}</div></div><div class="kmv">${fmtAmt(chgRowTotal(r))}<div class="m" style="font-size:12px;font-weight:600">✎ Edit</div></div></div>`).join('') : '<div class="m" style="margin-top:8px">No saved charges in this period.</div>';
 }
 function chgCsv() {
   const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
