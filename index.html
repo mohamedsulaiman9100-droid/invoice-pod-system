@@ -436,6 +436,9 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
 .cr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}.cr small{display:block;color:var(--muted);font-size:12px}
 .cin{width:100px;text-align:right;padding:10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:17px;font-weight:700;min-height:44px}
 .chgbig{font-size:26px;font-weight:800;margin-top:10px}.chgtot{margin-top:6px}.chgrows{margin-top:6px}
+
+.viewbar .tabs{flex-wrap:wrap}.vtab{padding:7px 11px}
+#drvRef{margin-right:6px}
 </style>
 </head>
 <body class="booting">
@@ -443,7 +446,7 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
   <div><h1>Invoice &amp; POD Manager</h1><div class="sub" id="whoLine">Invoices and delivery PODs</div></div>
   <div class="hdr-actions"><button class="btn primary" id="btnNew" type="button">+ New invoice</button><button class="btn" id="btnSignOut" type="button" hidden>Sign out</button></div>
 </div></header>
-<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false">Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button></div></div></nav>
+<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="invoices" aria-selected="true">Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false">Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button><button class="vtab" role="tab" data-view="km" aria-selected="false">Km</button><button class="vtab" role="tab" data-view="charges" aria-selected="false">Charges</button></div></div></nav>
 
 <main class="wrap">
  <div id="viewInvoices">
@@ -489,19 +492,29 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
   <div style="text-align:center;margin-top:12px"><button class="btn" id="btnMore" type="button" hidden>Load older</button></div>
  </div>
 
+ <div id="viewKm" hidden>
+  <div class="toolbar"><strong>Kilometres</strong><span class="grow"></span><button class="btn" id="btnKmRef" type="button">↻ Refresh</button></div>
+  <div class="hint" style="margin:0 0 10px">Switch Km ON for a driver in the Drivers tab.</div>
+  <section class="card" id="kmBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Kilometres</h3><button class="btn sm" id="kmCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-kmr="week" type="button">7 days</button><button class="btn sm" data-kmr="month" type="button">This month</button><button class="btn sm" data-kmr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="kmFrom" aria-label="From"><input type="date" id="kmTo" aria-label="To"></div><div class="rs kmchips" style="margin:10px 0 0"></div><div class="kmtot"></div><div class="kmrows"></div></section>
+ </div>
+
+ <div id="viewCharges" hidden>
+  <div class="toolbar"><strong>Outside vehicle charges</strong><span class="grow"></span><button class="btn" id="btnChgRef" type="button">↻ Refresh</button></div>
+  <section class="card" style="margin-bottom:12px"><div id="chgBodyA"></div></section>
+  <section class="card" id="chgBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><div style="display:flex;gap:6px"><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
+ </div>
+
  <div id="viewDrivers" hidden>
   <div id="drvMsg" class="banner" hidden></div>
   <div class="toolbar"><strong id="drvSummary">Drivers</strong><span class="grow"></span><button class="btn" id="btnDrvRefresh" type="button">Refresh</button></div>
   <section class="card" style="margin-bottom:12px"><h3>🏆 Top drivers this week</h3><div class="hint">Orders completed with POD, since Monday</div><div class="topList"></div></section>
   <ul class="list" id="drvList" aria-live="polite"></ul>
-  <section class="card" id="chgBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
-  <section class="card" id="kmBox" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Kilometres</h3><button class="btn sm" id="kmCsv" type="button">Export CSV</button></div><div class="kmrange"><button class="btn sm" data-kmr="week" type="button">7 days</button><button class="btn sm" data-kmr="month" type="button">This month</button><button class="btn sm" data-kmr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="kmFrom" aria-label="From"><input type="date" id="kmTo" aria-label="To"></div><div class="rs kmchips" style="margin:10px 0 0"></div><div class="kmtot"></div><div class="kmrows"></div></section>
  </div>
  <div id="viewOrders" hidden>
   <div id="tripMsg" class="banner" hidden></div>
   <section class="ohero">
     <div class="oh"><div><h2>Orders</h2><p id="ordSub"></p></div>
-      <div><button class="btn sm ghostw" id="btnTripUpload" type="button">⬆ Upload Excel</button><input type="file" id="tripFile" accept=".xlsx,.xlsm" hidden></div></div>
+      <div style="display:flex;gap:6px"><button class="btn sm ghostw" id="btnOrdRef" type="button">↻ Refresh</button><button class="btn sm ghostw" id="btnTripUpload" type="button">⬆ Upload Excel</button><input type="file" id="tripFile" accept=".xlsx,.xlsm" hidden></div></div>
     <div class="pipe" id="ordPipe" role="tablist" aria-label="Order status"></div>
   </section>
   <div id="tripPreview" class="card" hidden></div>
@@ -588,7 +601,7 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
 <!-- Editor -->
 <div class="overlay" id="editor" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="edTitle">
-    <header><h2><span id="edTitle">New invoice</span><span class="chip open" id="edChip" hidden>Open</span></h2><button class="iconbtn" id="edClose" data-act="ed-cancel" aria-label="Close editor" type="button">✕</button><button class="btn sm" id="drvOut" data-act="drv-out" type="button" hidden>Sign out</button></header>
+    <header><h2><span id="edTitle">New invoice</span><span class="chip open" id="edChip" hidden>Open</span></h2><button class="iconbtn" id="edClose" data-act="ed-cancel" aria-label="Close editor" type="button">✕</button><button class="btn sm" id="drvRef" type="button" aria-label="Refresh" hidden>↻ Refresh</button><button class="btn sm" id="drvOut" data-act="drv-out" type="button" hidden>Sign out</button></header>
     <div class="body">
       <div class="banner" id="outbox" hidden></div>
       <section class="card" id="cardTrip" hidden>
@@ -1910,7 +1923,7 @@ function applyEditorMode() {
   document.querySelector('label[for="noInput"]').textContent = dm ? 'SO number' : 'Invoice number';
   if (dm) { autoRead = false; const sw = $('#autoSw'); sw.checked = false; sw.closest('.autorow').hidden = true; }
   $('#cardInvoice').hidden = dm;
-  $('#edClose').hidden = dm; $('#drvOut').hidden = !dm;
+  $('#edClose').hidden = dm; $('#drvOut').hidden = !dm; $('#drvRef').hidden = !dm;
   $('#btnPdf').hidden = dm; $('#btnUpload').hidden = !dm;
   $('#btnCancel').textContent = dm ? 'Clear' : 'Cancel';
   if (dm) { $('#btnSave').hidden = true; $('#btnSaveClose').hidden = true; $('#edTitle').textContent = (typeof dtabTitle === 'function' ? dtabTitle() : 'Upload POD') + (session && session.demo ? ' · DEMO' : ''); $('#edChip').hidden = true; }
@@ -2178,12 +2191,14 @@ $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer' || e.
 
 let view = 'invoices';
 function setView(v) {
-  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#btnNew').hidden = v !== 'invoices';
+  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewCharges').hidden = v !== 'charges'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (v === 'inbox') loadInbox();
   if (v === 'drivers') { loadDrivers(); loadTop(); }
   if (v === 'orders') loadOrders();
+  if (v === 'km') loadKmReport();
+  if (v === 'charges') { Chg.open = null; loadChg(); loadChgReport(); }
 }
 /* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
 const ONLINE_MS = 90000;
@@ -2226,6 +2241,8 @@ document.addEventListener('visibilitychange', () => {
   if (App.role === 'admin' && view === 'inbox') loadInbox();
   if (App.role === 'admin' && view === 'drivers') loadDrivers();
   if (App.role === 'admin' && view === 'orders') loadOrders();
+  if (App.role === 'admin' && view === 'km') loadKmReport();
+  if (App.role === 'admin' && view === 'charges') { loadChg(); loadChgReport(); }
   if (App.role === 'driver') { syncOutbox(); pingSeen(); loadTrip(); }
 });
 
@@ -2243,7 +2260,7 @@ function startApp() {
   } else {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
-    setView(['inbox', 'drivers', 'orders'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
+    setView(['inbox', 'drivers', 'orders', 'km', 'charges'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'invoices');
     loadInbox(); if (!session.demo) { loadDrivers(); loadTop(); }
     setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
     addEventListener('online', () => { if (view === 'inbox') loadInbox(); });
@@ -2656,7 +2673,7 @@ async function loadKmReport() {
   try {
     const r = await api('/rest/v1/km_days?select=*&day=gte.' + fi.value + '&day=lte.' + ti.value + '&order=day.desc,driver_name.asc&limit=1000'); if (!r.ok) throw 0;
     KmA.all = await r.json(); renderKmReport();
-  } catch (e) { box.hidden = true; }
+  } catch (e) { box.hidden = false; }
 }
 function kmFlags(rows) {
   const by = {}; rows.forEach(r => (by[r.driver_id] = by[r.driver_id] || []).push(r));
@@ -2672,7 +2689,7 @@ function renderKmReport() {
   const ch = box.querySelector('.kmchips');
   if (ch) ch.innerHTML = names.length > 1 ? `<button type="button" class="${KmSel.length ? '' : 'on'}" data-kmd="">All</button>` + names.map(n => `<button type="button" class="${KmSel.includes(n) ? 'on' : ''}" data-kmd="${esc(n)}">${esc(n)}</button>`).join('') : '';
   const tracked = (window.__kmDrivers || []).length;
-  box.hidden = !tracked && !rows.length;
+  box.hidden = false;
   const flags = kmFlags(rows), tot = {};
   const dys = {}; rows.forEach(r => { if (r.end_km != null) { tot[r.driver_name] = (tot[r.driver_name] || 0) + r.end_km - r.start_km; dys[r.driver_name] = (dys[r.driver_name] || 0) + 1; } });
   const totals = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([n, k]) => `<span class="k un">${esc(n)}: ${fmtKm(k)} km · ${dys[n]} day${dys[n] > 1 ? 's' : ''}</span>`).join(' ');
@@ -2830,17 +2847,18 @@ async function chgRpc(name, args) {
   if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { const j = await res.json(); if (j.message) m = j.message; } catch (e) {} throw new Error(m); }
   return res.json();
 }
+const chgEl = () => $(session && session.role === 'admin' ? '#chgBodyA' : '#chgBody');
 const Chg = {date: dateKey(), rows: [], open: null, loading: false};
 const chgTotal = r => (r.orders || []).filter(o => DELIVERED.includes(o.status)).reduce((t, o) => t + Number(o.amount || 0), 0) + Number(r.labour || 0) + Number(r.return_charge || 0);
 async function loadChg() {
-  if (!session || !session.charges) return;
+  if (!session || !(session.charges || session.role === 'admin')) return;
   try { Chg.rows = await chgRpc('charges_day', {p_date: Chg.date}); } catch (e) { toast(netMsg(e), true); Chg.rows = Chg.rows || []; }
   if (Chg.open && !Chg.rows.find(r => r.driver_id === Chg.open)) Chg.open = null;
   renderChg();
 }
 function chgNav() { return `<div class="chgnav"><button type="button" id="chgPrev" aria-label="Previous day">‹</button><b>${esc(dayLabel(Chg.date))}${Chg.date === dateKey() ? ' · Today' : ''}</b><button type="button" id="chgNext" aria-label="Next day">›</button></div>`; }
 function renderChg() {
-  const c = $('#chgBody'); if (!c) return;
+  const c = chgEl(); if (!c) return;
   const r = Chg.open && Chg.rows.find(x => x.driver_id === Chg.open);
   if (r) return renderChgOne(c, r);
   const all = Chg.rows.reduce((t, x) => t + (x.saved ? chgTotal(x) : 0), 0);
@@ -2865,7 +2883,7 @@ function renderChgOne(c, r) {
   chgLive();
 }
 const numOf = el => { const v = parseFloat(String(el && el.value || '').replace(',', '.')); return isFinite(v) && v > 0 ? v : 0; };
-function chgLive() { const t = $('#chgTot'); if (!t) return; let s = numOf($('#chgLab')) + numOf($('#chgRet')); document.querySelectorAll('#chgBody [data-o]').forEach(i => { s += numOf(i); }); t.textContent = fmtAmt(s); }
+function chgLive() { const t = $('#chgTot'); if (!t) return; let s = numOf($('#chgLab')) + numOf($('#chgRet')); document.querySelectorAll('#chgBody [data-o], #chgBodyA [data-o]').forEach(i => { s += numOf(i); }); t.textContent = fmtAmt(s); }
 document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('cin')) chgLive(); });
 document.addEventListener('click', async e => {
   const t = e.target;
@@ -2876,15 +2894,19 @@ document.addEventListener('click', async e => {
     else if (t.id === 'chgPrev' || t.id === 'chgNext') { Chg.date = shiftDay(Chg.date, t.id === 'chgPrev' ? -1 : 1); Chg.open = null; await loadChg(); }
     else if (t.id === 'chgSave') {
       const r = Chg.rows.find(x => x.driver_id === Chg.open); if (!r) return;
-      const orders = [...document.querySelectorAll('#chgBody [data-o]')].map(i => ({id: i.dataset.o, amount: numOf(i)}));
+      const orders = [...document.querySelectorAll('#chgBody [data-o], #chgBodyA [data-o]')].map(i => ({id: i.dataset.o, amount: numOf(i)}));
       t.disabled = true; await chgRpc('charges_save', {p_date: Chg.date, p_driver: r.driver_id, p_labour: numOf($('#chgLab')), p_return: numOf($('#chgRet')), p_orders: orders});
-      toast('Saved ✓'); Chg.open = null; await loadChg();
+      toast('Saved ✓'); Chg.open = null; await loadChg(); if (session.role === 'admin') loadChgReport();
     }
     else if (t.closest('[data-flag]')) {
       const b = t.closest('[data-flag]'), on = b.dataset.on !== '1';
       await rpc('admin_set_flag', {p_driver: b.dataset.drv, p_flag: b.dataset.flag, p_on: on}); toast((b.dataset.flag === 'outside' ? 'Outside vehicle ' : 'Charges access ') + (on ? 'ON' : 'OFF')); await loadDrivers();
     }
     else if (t.id === 'chgCsv') chgCsv();
+    else if (t.id === 'btnChgRef') { Chg.open = null; await loadChg(); await loadChgReport(); toast('Refreshed'); }
+    else if (t.id === 'btnKmRef') { await loadKmReport(); toast('Refreshed'); }
+    else if (t.id === 'btnOrdRef') { await loadOrders(); toast('Refreshed'); }
+    else if (t.id === 'drvRef') { await refreshDriver(); toast('Refreshed'); }
     else if (t.closest('[data-chgr]')) {
       const m = t.closest('[data-chgr]').dataset.chgr, n = new Date(), f = dateKey;
       if (m === 'week') { $('#chgFrom').value = f(new Date(Date.now() - 6 * 86400000)); $('#chgTo').value = f(); }
@@ -2899,11 +2921,9 @@ document.addEventListener('click', async e => {
 const ChgA = {rows: []};
 async function loadChgReport() {
   const box = $('#chgBox'); if (!box || !session || session.demo) return;
-  const outs = window.__outDrivers || [];
-  box.hidden = !outs.length && !ChgA.rows.length; if (!outs.length) return;
   const fi = $('#chgFrom'), ti = $('#chgTo');
   if (!fi.value) { const n = new Date(); fi.value = dateKey(new Date(n.getFullYear(), n.getMonth(), 1)); ti.value = dateKey(); }
-  try { ChgA.rows = await chgRpc('charges_report', {p_from: fi.value, p_to: ti.value}); box.hidden = false; renderChgReport(); } catch (e) { box.hidden = true; }
+  try { ChgA.rows = await chgRpc('charges_report', {p_from: fi.value, p_to: ti.value}); renderChgReport(); } catch (e) { box.hidden = false; }
 }
 const chgRowTotal = r => Number(r.delivery) + Number(r.labour) + Number(r.return_charge);
 function renderChgReport() {
@@ -2919,6 +2939,12 @@ function chgCsv() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv'})); a.download = 'Outside_charges_' + $('#chgFrom').value + '_to_' + $('#chgTo').value + '.csv'; document.body.appendChild(a); a.click(); a.remove();
 }
 document.addEventListener('change', e => { if (e.target.id === 'chgFrom' || e.target.id === 'chgTo') loadChgReport(); });
+
+async function refreshDriver() {
+  try { syncOutbox(); } catch (e) {}
+  setDTab(Dtab);
+  await Promise.all([loadTrip(), loadKm(), loadMyPods(), loadTop()].map(p => Promise.resolve(p).catch(() => {})));
+}
 /* =====================================================================
    Boot
    ===================================================================== */
