@@ -465,6 +465,43 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
 #viewToday .toolbar strong{font-size:.95rem;white-space:nowrap}
 #viewToday .toolbar .btn{padding:6px 10px;font-size:.8rem;white-space:nowrap;min-height:0}
 .autoLbl{font-size:.74rem;color:#6b7686;margin:2px 2px 8px}
+/* ===== admin phone layout: compact header + bottom bar ===== */
+body.adm header.top .wrap{flex-wrap:nowrap;padding-top:8px;padding-bottom:8px;gap:8px}
+body.adm header.top h1{font-size:0;gap:0;flex-direction:row;align-items:center}
+body.adm header.top h1::before{width:104px;height:30px}
+body.adm header.top .sub{display:none}
+body.adm header.top > .wrap > div:first-child{display:flex;align-items:center;gap:10px}
+body.adm #whoLine{display:block!important;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);margin:0}
+body.adm .hdr-actions{flex-wrap:nowrap}
+body.adm .hdr-actions .btn{padding:6px 11px;font-size:.8rem;min-height:0;white-space:nowrap}
+body.adm main{padding-bottom:96px}
+body.adm #viewBar{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--surface);border:0;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+body.adm #viewBar .wrap{padding:0 4px;max-width:none}
+body.adm #viewBar .tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:0;overflow:visible;background:none;box-shadow:none;border-radius:0}
+body.adm #viewBar .vtab,body.adm #viewBar .mtab{appearance:none;background:none;border:0;border-radius:0;box-shadow:none;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer}
+body.adm #viewBar .vi{font-size:21px;line-height:1.1}
+body.adm #viewBar .vtab[aria-selected="true"],body.adm #viewBar .mtab.on{background:none;color:var(--ink);box-shadow:none}
+body.adm #viewBar .vtab[aria-selected="true"]::before,body.adm #viewBar .mtab.on::before{content:"";position:absolute;top:0;width:34px;height:3px;border-radius:9px;background:#e2b75b}
+body.adm #viewBar .vtab .dot{position:absolute;top:3px;left:calc(50% + 8px);margin:0;min-width:17px;padding:1px 5px;font-size:10.5px}
+body.adm #viewBar .vtab[data-view="invoices"],body.adm #viewBar .vtab[data-view="km"],body.adm #viewBar .vtab[data-view="charges"]{display:none}
+body.adm #viewBar .vtab[data-view="today"]{order:1}body.adm #viewBar .vtab[data-view="orders"]{order:2}body.adm #viewBar .vtab[data-view="inbox"]{order:3}body.adm #viewBar .vtab[data-view="drivers"]{order:4}body.adm #viewBar .mtab{order:5}
+.mtab{display:none}body.adm .mtab{display:flex}
+#moreSheet{position:fixed;right:10px;bottom:74px;z-index:80;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(15,37,56,.22);padding:6px;min-width:170px}
+#moreSheet[hidden]{display:none}
+#moreSheet button{display:block;width:100%;text-align:left;appearance:none;background:none;border:0;padding:12px 14px;font-size:15px;font-weight:600;color:var(--ink);border-radius:10px;cursor:pointer}
+#moreSheet button:active{background:var(--bg)}
+body:not(.adm) #moreSheet{display:none}
+/* needs action */
+.needs{margin:4px 0 12px;background:#fdecea;border:1px solid #f3b8b2;border-radius:14px;padding:12px 14px}
+.needs .nh{font-weight:800;color:#b3261e;font-size:14px}
+.needs .nrow{appearance:none;width:100%;background:none;border:0;border-top:1px solid rgba(179,38,30,.15);margin-top:8px;padding:10px 0 0;display:flex;justify-content:space-between;font-size:14px;color:#121a26;cursor:pointer;text-align:left}
+.needs .nrow b{color:#b3261e}
+.needs.ok{background:#e4f5ec;border-color:#b5e0c8}.needs.ok .nh{color:#0e7a55}
+.dtiles{grid-template-columns:repeat(3,1fr)!important}
+body.adm main{padding-top:14px}
+body.adm #viewBar{z-index:45}
+body.adm .ordbar{bottom:calc(62px + env(safe-area-inset-bottom));z-index:44}
+body.adm #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
 </style>
 </head>
 <body class="booting">
@@ -472,7 +509,8 @@ body.driver[data-dtab="charges"] #cardChg{display:block!important}#cardChg{displ
   <div><h1>Invoice &amp; POD Manager</h1><div class="sub" id="whoLine">Invoices and delivery PODs</div></div>
   <div class="hdr-actions"><button class="btn primary" id="btnNew" type="button">+ New invoice</button><button class="btn" id="btnSignOut" type="button" hidden>Sign out</button></div>
 </div></header>
-<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="today" aria-selected="false">Today<span class="dot" id="cnt-today" hidden>0</span></button><button class="vtab" role="tab" data-view="invoices" aria-selected="true">Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false">PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false">Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false">Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button><button class="vtab" role="tab" data-view="km" aria-selected="false">Km</button><button class="vtab" role="tab" data-view="charges" aria-selected="false">Charges</button></div></div></nav>
+<nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="today" aria-selected="false"><span class="vi">📊</span>Today<span class="dot" id="cnt-today" hidden>0</span></button><button class="vtab" role="tab" data-view="invoices" aria-selected="true"><span class="vi">🧾</span>Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false"><span class="vi">📥</span>PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false"><span class="vi">📦</span>Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false"><span class="vi">👥</span>Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button><button class="vtab" role="tab" data-view="km" aria-selected="false"><span class="vi">🚚</span>Km</button><button class="vtab" role="tab" data-view="charges" aria-selected="false"><span class="vi">💰</span>Charges</button><button class="mtab" type="button" id="navMore" aria-expanded="false"><span class="vi">☰</span>More</button></div></div></nav>
+<div id="moreSheet" hidden><button type="button" data-gov="invoices">🧾 Invoices</button><button type="button" data-gov="km">🚚 Km</button><button type="button" data-gov="charges">💰 Charges</button></div>
 
 <main class="wrap">
  <div id="viewInvoices">
@@ -2228,6 +2266,7 @@ function setView(v) {
   view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewToday').hidden = v !== 'today'; $('#viewCharges').hidden = v !== 'charges'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
+  if (typeof navSync === 'function') navSync(v);
   if (v === 'inbox') loadInbox();
   if (v === 'drivers') { loadDrivers(); loadTop(); }
   if (v === 'orders') loadOrders();
@@ -2294,8 +2333,8 @@ function startApp() {
     pingSeen(); setInterval(pingSeen, 30000);
     setDTab('orders'); loadMyPods(); loadKm(); loadTrip(); loadTop(); setInterval(() => { if (!document.hidden) { loadKm(); loadTrip(); loadTop(); } }, 60000);
   } else {
-    $('#viewBar').hidden = false; $('#btnSignOut').hidden = false;
-    $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Signed in as ' + session.name + ' (admin)';
+    $('#viewBar').hidden = false; $('#btnSignOut').hidden = false; document.body.classList.add('adm');
+    $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Admin';
     setView(['today', 'inbox', 'drivers', 'orders', 'km', 'charges'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'today');
     loadInbox(); if (!session.demo) { loadDrivers(); loadTop(); }
     setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
@@ -3033,7 +3072,13 @@ function renderDash() {
   const c = d.counts || {}, n = k => Number(c[k] || 0);
   const tile = (v, l, cls, go) => `<button type="button" class="dtile ${cls || ''}" ${go ? 'data-dgo="' + go + '"' : ''}><b>${v}</b><span>${l}</span></button>`;
   const late = d.missing.filter(m => m.days >= 2).length;
-  let h = `<div class="dtiles">${tile(d.total, 'Orders today', '', 'orders')}${tile(n('complete') + n('handed_over'), 'Done', 'ok', 'orders')}${tile(n('assigned') + n('out'), 'Still out', '', 'orders')}${tile(d.missing.length, 'POD missing', d.missing.length ? (late ? 'bad' : 'warn') : 'ok')}${tile(n('returned'), 'Returned', n('returned') ? 'warn' : '', 'orders')}${tile(d.unassigned_all, 'Unassigned', d.unassigned_all ? 'warn' : '', 'orders')}</div>`;
+  const act = [];
+  if (d.missing.length) act.push(['inbox', d.missing.length + ' POD' + (d.missing.length > 1 ? 's' : '') + ' missing' + (late ? ' · ' + late + ' late' : '')]);
+  if (n('returned')) act.push(['orders:returned', n('returned') + ' returned, not at hub']);
+  if (n('unassigned') || d.not_assigned) act.push(['orders:unassigned', (n('unassigned') + (d.not_assigned || 0)) + ' not assigned']);
+  let h = act.length ? `<div class="needs"><div class="nh">⚠ Needs action · ${act.length}</div>` + act.map(([go, t]) => `<button type="button" class="nrow" data-dgo="${go}"><span>${t}</span><b>View ›</b></button>`).join('') + '</div>'
+    : '<div class="needs ok"><div class="nh">✓ All clear — nothing needs action</div></div>';
+  h += `<div class="dtiles">${tile(d.total, 'Orders', '', 'orders')}${tile(n('complete') + n('handed_over'), 'Done', 'ok', 'orders')}${tile(n('assigned') + n('out'), 'Still out', '', 'orders')}</div>`;
   h += `<div class="dlinks"><button type="button" class="chgv" data-dgo="inbox"><div><b>PODs to download</b><div class="m">${d.new_uploads} new · ${d.uploads_today} uploaded today${d.not_assigned ? ' · ' + d.not_assigned + ' not assigned' : ''}</div></div><span class="pill ${d.new_uploads ? '' : 'ok'}">${d.new_uploads}</span></button>
   <button type="button" class="chgv" data-dgo="drivers"><div><b>Drivers online</b><div class="m">${d.online} of ${d.drivers_total} using the app right now</div></div><span class="pill ${d.online ? 'ok' : ''}">${d.online}</span></button></div>`;
   if ((d.with_merch || []).length) h += `<h3 class="dh">With merchandisers <span class="m">· waiting for POD or return</span></h3>` + d.with_merch.map(w => `<div class="mrow ${w.days >= 3 ? 'late' : ''}"><div><b class="nmc">${esc(w.name)}</b><div class="m">${w.n} order${w.n > 1 ? 's' : ''}${w.returns ? ' · ' + w.returns + ' return' + (w.returns > 1 ? 's' : '') : ''}</div></div><span class="pill ${w.days >= 3 ? 'bad' : w.days >= 1 ? 'warn' : ''}">${w.days <= 0 ? 'today' : w.days + ' day' + (w.days > 1 ? 's' : '')}</span></div>`).join('');
@@ -3081,7 +3126,7 @@ async function cleanPhotos() {
 document.addEventListener('click', async e => {
   const t = e.target;
   try {
-    const g = t.closest('[data-dgo]'); if (g) return setView(g.dataset.dgo);
+    const g = t.closest('[data-dgo]'); if (g) { const [v, f] = g.dataset.dgo.split(':'); setView(v); if (f && typeof Ord !== 'undefined') { Ord.f = f; if (typeof renderOrders === 'function') renderOrders(); } return; }
     if (t.id === 'btnDashRef') { await loadDash(); toast('Refreshed'); }
     else if (t.id === 'btnBackup') await makeBackup();
     else if (t.id === 'btnClean') {
@@ -3106,7 +3151,7 @@ const Auto = {on: LS.get('pod.auto') !== '0', ms: 120000, last: null, busy: fals
 function autoUI() {
   const t = Auto.last ? Auto.last.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
   document.querySelectorAll('.autoBtn').forEach(b => { b.textContent = Auto.on ? '⟳ Auto: ON' : '⟳ Auto: OFF'; b.setAttribute('aria-pressed', String(Auto.on)); });
-  document.querySelectorAll('.autoLbl').forEach(l => { l.textContent = (t ? 'Updated ' + t : '') + (Auto.on ? ' · refreshes every 2 min' : ' · auto-refresh off'); });
+  document.querySelectorAll('.autoLbl').forEach(l => { l.textContent = (t ? 'Updated ' + t + ' · ' : '') + (Auto.on ? 'refreshes every 2 min' : 'auto-refresh off'); });
 }
 function autoSafe() {
   if (!session || session.role !== 'admin' || session.demo || document.hidden || navigator.onLine === false) return false;
@@ -3130,6 +3175,18 @@ document.addEventListener('click', e => {
   if (e.target.closest && e.target.closest('.vtab')) setTimeout(() => { if (!Auto.last) Auto.last = new Date(); autoUI(); }, 900);
 });
 autoUI();
+
+/* ---- admin bottom bar: More sheet ---- */
+function navSync(v) {
+  const more = ['invoices', 'km', 'charges'].includes(v), b = $('#navMore'), sh = $('#moreSheet');
+  if (b) { b.classList.toggle('on', more); b.setAttribute('aria-expanded', 'false'); } if (sh) sh.hidden = true;
+}
+document.addEventListener('click', e => {
+  const sh = $('#moreSheet'), b = e.target.closest && e.target.closest('#navMore');
+  if (b) { sh.hidden = !sh.hidden; b.setAttribute('aria-expanded', String(!sh.hidden)); return; }
+  const g = e.target.closest && e.target.closest('[data-gov]'); if (g) { setView(g.dataset.gov); return; }
+  if (sh && !sh.hidden && !(e.target.closest && e.target.closest('#moreSheet'))) sh.hidden = true;
+});
 /* =====================================================================
    Boot
    ===================================================================== */
