@@ -502,6 +502,12 @@ body.adm main{padding-top:14px}
 body.adm #viewBar{z-index:45}
 body.adm .ordbar{bottom:calc(62px + env(safe-area-inset-bottom));z-index:44}
 body.adm #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+.needs .nitem{border-top:1px solid rgba(179,38,30,.15);margin-top:8px}
+.needs .nitem .nrow{border-top:0;margin-top:0;padding:10px 0}
+.needs .nbody{background:#fff;border:1px solid #f0c9c5;border-radius:12px;padding:4px 12px 10px;margin:0 0 8px}
+.needs .nd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid #f1e3e1;font-size:14px}
+.needs .nd .m{font-size:12px;color:#5c6878}
+.needs .nopen{appearance:none;background:none;border:0;color:#b3261e;font-weight:700;font-size:14px;padding:10px 0 0;cursor:pointer;width:100%;text-align:right}
 </style>
 </head>
 <body class="booting">
@@ -3056,7 +3062,7 @@ async function refreshDriver() {
   await Promise.all([loadTrip(), loadKm(), loadMyPods(), loadTop()].map(p => Promise.resolve(p).catch(() => {})));
 }
 /* =============== Today dashboard, missing PODs, storage / backup / cleanup =============== */
-const Dash = {d: null, st: null, days: 30};
+const Dash = {d: null, st: null, days: 30, open: new Set(), det: {}};
 const fmtSize = b => { b = Number(b || 0); return b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.round(b / 1e3) + ' KB'; };
 const agoTxt = ms => { const d = Math.floor(ms / 864e5); return d <= 0 ? 'today' : d === 1 ? '1 day ago' : d + ' days ago'; };
 async function loadDash() {
@@ -3073,10 +3079,11 @@ function renderDash() {
   const tile = (v, l, cls, go) => `<button type="button" class="dtile ${cls || ''}" ${go ? 'data-dgo="' + go + '"' : ''}><b>${v}</b><span>${l}</span></button>`;
   const late = d.missing.filter(m => m.days >= 2).length;
   const act = [];
-  if (d.missing.length) act.push(['inbox', d.missing.length + ' POD' + (d.missing.length > 1 ? 's' : '') + ' missing' + (late ? ' · ' + late + ' late' : '')]);
-  if (n('returned')) act.push(['orders:returned', n('returned') + ' returned, not at hub']);
-  if (n('unassigned') || d.not_assigned) act.push(['orders:unassigned', (n('unassigned') + (d.not_assigned || 0)) + ' not assigned']);
-  let h = act.length ? `<div class="needs"><div class="nh">⚠ Needs action · ${act.length}</div>` + act.map(([go, t]) => `<button type="button" class="nrow" data-dgo="${go}"><span>${t}</span><b>View ›</b></button>`).join('') + '</div>'
+  if (d.missing.length) act.push(['missing', d.missing.length + ' POD' + (d.missing.length > 1 ? 's' : '') + ' missing' + (late ? ' · ' + late + ' late' : '')]);
+  if (n('returned')) act.push(['returned', n('returned') + ' returned, not at hub']);
+  if (n('unassigned')) act.push(['unassigned', n('unassigned') + ' order' + (n('unassigned') > 1 ? 's' : '') + ' not given to a driver']);
+  if (d.not_assigned) act.push(['unmatched', d.not_assigned + ' uploaded POD' + (d.not_assigned > 1 ? 's' : '') + ' not matched to an invoice']);
+  let h = act.length ? `<div class="needs"><div class="nh">⚠ Needs action · ${act.length}</div>` + act.map(([k, t]) => `<div class="nitem"><button type="button" class="nrow" data-nx="${k}" aria-expanded="${Dash.open.has(k)}"><span>${t}</span><b>${Dash.open.has(k) ? 'Hide ⌃' : 'Details ⌄'}</b></button><div class="nbody" data-nb="${k}" ${Dash.open.has(k) ? '' : 'hidden'}>${nBody(k, d)}</div></div>`).join('') + '</div>'
     : '<div class="needs ok"><div class="nh">✓ All clear — nothing needs action</div></div>';
   h += `<div class="dtiles">${tile(d.total, 'Orders', '', 'orders')}${tile(n('complete') + n('handed_over'), 'Done', 'ok', 'orders')}${tile(n('assigned') + n('out'), 'Still out', '', 'orders')}</div>`;
   h += `<div class="dlinks"><button type="button" class="chgv" data-dgo="inbox"><div><b>PODs to download</b><div class="m">${d.new_uploads} new · ${d.uploads_today} uploaded today${d.not_assigned ? ' · ' + d.not_assigned + ' not assigned' : ''}</div></div><span class="pill ${d.new_uploads ? '' : 'ok'}">${d.new_uploads}</span></button>
@@ -3158,11 +3165,12 @@ function autoSafe() {
   if (view === 'today') return true;
   return false;
 }
+function nReopen() { Dash.open.forEach(k => { if (N_Q[k]) nLoad(k); }); }
 async function autoTick(force) {
   if (Auto.busy || (!force && (!Auto.on || !autoSafe()))) return;
   Auto.busy = true;
   try {
-    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); renderDash(); }
+    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); renderDash(); nReopen(); }
     Auto.last = new Date();
   } catch (e) {} finally { Auto.busy = false; autoUI(); }
 }
@@ -3186,6 +3194,41 @@ document.addEventListener('click', e => {
   if (b) { sh.hidden = !sh.hidden; b.setAttribute('aria-expanded', String(!sh.hidden)); return; }
   const g = e.target.closest && e.target.closest('[data-gov]'); if (g) { setView(g.dataset.gov); return; }
   if (sh && !sh.hidden && !(e.target.closest && e.target.closest('#moreSheet'))) sh.hidden = true;
+});
+
+/* ---- Needs action: tap a red row to see the actual orders ---- */
+function nAgo(dt) { const t = new Date(dt); if (isNaN(t)) return ''; const d = Math.floor((Date.now() - t) / 864e5); return d <= 0 ? 'today' : d + ' day' + (d > 1 ? 's' : '') + ' ago'; }
+function nBody(k, d) {
+  const row = (a, b, c, pill) => `<div class="nd"><div><b>${esc(a)}</b> <span class="m">${esc(b || '')}</span><div class="m">${c}</div></div>${pill ? `<span class="pill warn">${esc(pill)}</span>` : ''}</div>`;
+  let list = '', go = '', lbl = '';
+  if (k === 'missing') { list = d.missing.map(m => row(m.so_no, m.customer, '<span class="nmc">' + esc(m.driver_name || '') + '</span> · delivered, no POD photo yet', m.days <= 0 ? 'today' : m.days + ' day' + (m.days > 1 ? 's' : ''))).join(''); go = 'orders:pod_pending'; lbl = 'Open in Orders'; }
+  else {
+    const r = Dash.det[k];
+    if (!r) return '<div class="m">Loading…</div>';
+    if (r === 'err') return '<div class="m">Could not load. Tap Refresh.</div>';
+    if (k === 'returned') { list = r.map(x => row(x.so_no, x.customer, '<span class="nmc">' + esc(x.driver_name || '') + '</span> · returned ' + nAgo(x.updated_at) + (x.return_from ? ' · carried by ' + esc(x.return_from) : ''))).join(''); go = 'orders:returned'; lbl = 'Open in Orders'; }
+    if (k === 'unassigned') { list = r.map(x => row(x.so_no, x.customer, 'Order date ' + esc(x.work_date))).join(''); go = 'orders:unassigned'; lbl = 'Open in Orders'; }
+    if (k === 'unmatched') { list = r.map(x => row(x.inv_no || '(no number)', '', '<span class="nmc">' + esc(x.driver_name || '') + '</span> · uploaded ' + nAgo(x.created_at))).join(''); go = 'inbox'; lbl = 'Open PODs'; }
+    if (!r.length) list = '<div class="m">Nothing here now.</div>';
+  }
+  return list + (go ? `<button type="button" class="nopen" data-dgo="${go}">${lbl} ›</button>` : '');
+}
+const N_Q = {
+  returned: '/rest/v1/assignments?select=so_no,customer,driver_name,updated_at,return_from&status=eq.returned&hub_received_at=is.null&order=updated_at.desc&limit=50',
+  unassigned: '/rest/v1/assignments?select=so_no,customer,work_date&status=eq.unassigned&order=work_date.desc&limit=50',
+  unmatched: '/rest/v1/pod_uploads?select=inv_no,driver_name,created_at&matched=eq.false&downloaded_at=is.null&order=created_at.desc&limit=50'
+};
+async function nLoad(k) {
+  if (!N_Q[k]) return;
+  try { const res = await api(N_Q[k]); if (!res.ok) throw 0; Dash.det[k] = await res.json(); } catch (e) { Dash.det[k] = 'err'; }
+  const el = document.querySelector('[data-nb="' + k + '"]'); if (el && Dash.d) el.innerHTML = nBody(k, Dash.d);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-nx]'); if (!b) return;
+  const k = b.dataset.nx, box = document.querySelector('[data-nb="' + k + '"]'), open = Dash.open.has(k);
+  if (open) Dash.open.delete(k); else Dash.open.add(k);
+  box.hidden = open; b.setAttribute('aria-expanded', String(!open)); b.querySelector('b').textContent = open ? 'Details ⌄' : 'Hide ⌃';
+  if (!open) { box.innerHTML = nBody(k, Dash.d); delete Dash.det[k]; box.innerHTML = nBody(k, Dash.d); nLoad(k); }
 });
 /* =====================================================================
    Boot
