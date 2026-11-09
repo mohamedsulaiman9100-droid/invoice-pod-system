@@ -508,6 +508,12 @@ body.adm #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
 .needs .nd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid #f1e3e1;font-size:14px}
 .needs .nd .m{font-size:12px;color:#5c6878}
 .needs .nopen{appearance:none;background:none;border:0;color:#b3261e;font-weight:700;font-size:14px;padding:10px 0 0;cursor:pointer;width:100%;text-align:right}
+.mcard{margin-bottom:8px}
+button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.mbody{background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;padding:4px 14px 10px;margin:-6px 0 0}
+.mbody .nd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mbody .nd .m{font-size:12px}
+.mbody .nopen{appearance:none;background:none;border:0;color:#1b4f9c;font-weight:700;font-size:14px;padding:10px 0 0;cursor:pointer;width:100%;text-align:right}
 </style>
 </head>
 <body class="booting">
@@ -2412,9 +2418,10 @@ function parseAssignGrid(grid) {
 /* ---- shared labels ---- */
 const ST = {unassigned: {t: 'Unassigned', k: 'un'}, assigned: {t: 'Assigned', k: 'as'}, out: {t: 'Out for delivery', k: 'out'}, pod_pending: {t: 'Delivered · POD pending', k: 'pp'},
   complete: {t: 'Complete', k: 'dl'}, handed_over: {t: 'Handed over', k: 'hm'}, returned: {t: 'Returned', k: 'rt'}};
-const stOf = r => r.status === 'unassigned' && r.flag === 'not_picked' ? {t: 'Not picked', k: 'np'} : (r.status === 'returned' && r.hub_received_at ? {t: 'Returned · at hub', k: 'rt'} : ST[r.status] || ST.assigned);
+const stOf = r => isMerch(r) && session && session.role === 'admin' ? {t: 'With ' + r.driver_name, k: 'out'} : r.status === 'unassigned' && r.flag === 'not_picked' ? {t: 'Not picked', k: 'np'} : (r.status === 'returned' && r.hub_received_at ? {t: 'Returned · at hub', k: 'rt'} : ST[r.status] || ST.assigned);
 const kchip = r => { const s = stOf(r); return `<span class="k ${s.k}">${s.t}</span>`; };
-const bucketOf = r => r.status === 'returned' ? (r.hub_received_at ? 'closed' : 'returned') : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
+const isMerch = r => r.status === 'out' && r.handed_by_id && r.driver_id !== r.handed_by_id && !r.return_from;
+const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? (r.hub_received_at ? 'closed' : 'returned') : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
   returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone',
@@ -2534,7 +2541,8 @@ document.addEventListener('click', async e => {
 
 /* =============== admin: Orders tab =============== */
 const Ord = {rows: [], drivers: [], f: 'unassigned', q: '', drv: '', sel: new Set(), parsed: null, pick: null};
-const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned, not at hub', '#e26b61'], ['closed', 'Closed', '#35c28e']];
+const ageTxt = t => { const d = Math.floor((Date.now() - new Date(t)) / 864e5); return isNaN(d) ? '' : d <= 0 ? 'today' : d + ' day' + (d > 1 ? 's' : ''); };
+const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['merch', 'With merchandiser', '#a779d9'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned, not at hub', '#e26b61'], ['closed', 'Closed', '#35c28e']];
 async function loadOrderDrivers() {
   try { const res = await api('/rest/v1/profiles?select=id,display_name&role=eq.driver&order=display_name'); if (res.ok) Ord.drivers = await res.json(); } catch (e) {}
   $('#ordDrv').innerHTML = '<option value="">All drivers</option>' + Ord.drivers.map(d => `<option>${esc(d.display_name)}</option>`).join('');
@@ -2564,7 +2572,7 @@ function renderOrders() {
   const vis = ordShown();
   $('#ordList').innerHTML = vis.length ? vis.map(r => {
     const selectable = true;
-    const sub = r.status === 'unassigned' && r.flag === 'not_picked' ? `Not picked by ${esc(r.prev_driver || 'driver')}: ${esc(r.note || '')}` : r.driver_name ? (r.handed_by && r.driver_id !== r.handed_by_id ? esc(r.handed_by) + ' → <b>' + esc(r.driver_name) + '</b> (merchandiser)' : 'Driver: ' + esc(r.driver_name)) + (r.return_from ? ' · ↩ return from ' + esc(r.return_from) : '') : '';
+    const sub = r.status === 'unassigned' && r.flag === 'not_picked' ? `Not picked by ${esc(r.prev_driver || 'driver')}: ${esc(r.note || '')}` : r.driver_name ? (r.handed_by && r.driver_id !== r.handed_by_id && !r.return_from ? esc(r.handed_by) + ' → <b>' + esc(r.driver_name) + '</b> (merchandiser)' + (r.status === 'out' && ageTxt(r.handed_at || r.updated_at) ? ' · ' + ageTxt(r.handed_at || r.updated_at) : '') : 'Driver: ' + esc(r.driver_name)) + (r.return_from ? ' · ↩ return from ' + esc(r.return_from) : '') : '';
     return `<li class="ord" data-id="${r.id}">${selectable ? `<button class="rb ${Ord.sel.has(r.id) ? 'on' : ''}" data-osel="${r.id}" type="button" aria-label="Select"></button>` : '<span></span>'}`
       + `<div><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>${kchip(r)}</li>`;
   }).join('') : `<li class="empty">${Ord.rows.length ? 'No orders in this group.' : 'No orders for this date. Tap Upload Excel.'}</li>`;
@@ -3068,9 +3076,18 @@ const agoTxt = ms => { const d = Math.floor(ms / 864e5); return d <= 0 ? 'today'
 async function loadDash() {
   if (!session || session.role !== 'admin' || session.demo) return;
   try { Dash.d = await chgRpc('dash_today', {}); } catch (e) { toast(netMsg(e), true); }
+  await dashMerch();
   try { Dash.st = await chgRpc('storage_usage', {p_days: Dash.days}); } catch (e) {}
   renderDash();
 }
+async function dashMerch() {
+  try {
+    const res = await api('/rest/v1/assignments?select=so_no,customer,driver_name,driver_id,handed_by,handed_by_id,handed_at,updated_at,status,return_from&status=eq.out&handed_by_id=not.is.null&order=handed_at.asc&limit=300');
+    const rows = res.ok ? await res.json() : [];
+    Dash.mo = rows.filter(r => r.handed_by_id && r.driver_id !== r.handed_by_id && !r.return_from && r.status === 'out');
+  } catch (e) { Dash.mo = Dash.mo || []; }
+}
+function mAge(r) { const d = Math.floor((Date.now() - new Date(r.handed_at || r.updated_at)) / 864e5); return isNaN(d) ? 0 : Math.max(0, d); }
 function dashBadge() { const b = $('#cnt-today'); if (!b) return; const n = Dash.d ? Dash.d.missing.length : 0; b.hidden = !n; b.textContent = n > 99 ? '99+' : n; }
 function renderDash() {
   const el = $('#dashBody'); if (!el) return; const d = Dash.d; dashBadge();
@@ -3080,6 +3097,8 @@ function renderDash() {
   const late = d.missing.filter(m => m.days >= 2).length;
   const act = [];
   if (d.missing.length) act.push(['missing', d.missing.length + ' POD' + (d.missing.length > 1 ? 's' : '') + ' missing' + (late ? ' · ' + late + ' late' : '')]);
+  const lateM = {}; (Dash.mo || []).filter(r => mAge(r) >= 2).forEach(r => { lateM[r.driver_name] = (lateM[r.driver_name] || 0) + 1; });
+  Object.keys(lateM).forEach(nm => act.push(['mlate:' + nm, lateM[nm] + ' order' + (lateM[nm] > 1 ? 's' : '') + ' with ' + nm + ' for 2+ days']));
   if (n('returned')) act.push(['returned', n('returned') + ' returned, not at hub']);
   if (n('unassigned')) act.push(['unassigned', n('unassigned') + ' order' + (n('unassigned') > 1 ? 's' : '') + ' not given to a driver']);
   if (d.not_assigned) act.push(['unmatched', d.not_assigned + ' uploaded POD' + (d.not_assigned > 1 ? 's' : '') + ' not matched to an invoice']);
@@ -3088,7 +3107,7 @@ function renderDash() {
   h += `<div class="dtiles">${tile(d.total, 'Orders', '', 'orders')}${tile(n('complete') + n('handed_over'), 'Done', 'ok', 'orders')}${tile(n('assigned') + n('out'), 'Still out', '', 'orders')}</div>`;
   h += `<div class="dlinks"><button type="button" class="chgv" data-dgo="inbox"><div><b>PODs to download</b><div class="m">${d.new_uploads} new · ${d.uploads_today} uploaded today${d.not_assigned ? ' · ' + d.not_assigned + ' not assigned' : ''}</div></div><span class="pill ${d.new_uploads ? '' : 'ok'}">${d.new_uploads}</span></button>
   <button type="button" class="chgv" data-dgo="drivers"><div><b>Drivers online</b><div class="m">${d.online} of ${d.drivers_total} using the app right now</div></div><span class="pill ${d.online ? 'ok' : ''}">${d.online}</span></button></div>`;
-  if ((d.with_merch || []).length) h += `<h3 class="dh">With merchandisers <span class="m">· waiting for POD or return</span></h3>` + d.with_merch.map(w => `<div class="mrow ${w.days >= 3 ? 'late' : ''}"><div><b class="nmc">${esc(w.name)}</b><div class="m">${w.n} order${w.n > 1 ? 's' : ''}${w.returns ? ' · ' + w.returns + ' return' + (w.returns > 1 ? 's' : '') : ''}</div></div><span class="pill ${w.days >= 3 ? 'bad' : w.days >= 1 ? 'warn' : ''}">${w.days <= 0 ? 'today' : w.days + ' day' + (w.days > 1 ? 's' : '')}</span></div>`).join('');
+  if ((d.with_merch || []).length) h += `<h3 class="dh">With merchandisers <span class="m">· waiting for POD or return</span></h3>` + d.with_merch.map(w => { const k = 'm:' + w.name, op = Dash.open.has(k); return `<div class="mcard"><button type="button" class="mrow ${w.days >= 3 ? 'late' : ''}" data-nx="${esc(k)}" aria-expanded="${op}"><div><b class="nmc">${esc(w.name)}</b><div class="m">${w.n} order${w.n > 1 ? 's' : ''}${w.returns ? ' · ' + w.returns + ' return' + (w.returns > 1 ? 's' : '') : ''}</div></div><span class="pill ${w.days >= 3 ? 'bad' : w.days >= 1 ? 'warn' : ''}">${w.days <= 0 ? 'today' : w.days + ' day' + (w.days > 1 ? 's' : '')} ${op ? '⌃' : '⌄'}</span></button><div class="nbody mbody" data-nb="${esc(k)}" ${op ? '' : 'hidden'}>${nBody(k, d)}</div></div>`; }).join('');
   h += `<h3 class="dh">Drivers today</h3>` + (d.drivers.length ? d.drivers.map(x => { const done = x.complete + x.handed_over; return `<div class="drow"><div><b class="nmc">${esc(x.name)}</b><div class="m">${done} of ${x.total} done${x.open ? ' · ' + x.open + ' still out' : ''}${x.returned ? ' · ' + x.returned + ' returned' : ''}</div><div class="stack"><i class="s-delivered" style="width:${done / x.total * 100}%"></i><i class="s-out" style="width:${x.pod_pending / x.total * 100}%"></i><i class="s-returned" style="width:${x.returned / x.total * 100}%"></i></div></div>${x.pod_pending ? `<span class="pill bad">${x.pod_pending} POD missing</span>` : done === x.total ? '<span class="pill ok">All done</span>' : ''}</div>`; }).join('') : '<div class="m">No orders assigned for today.</div>');
   h += `<h3 class="dh">POD missing <span class="m">· delivered but no photo yet</span></h3>` + (d.missing.length ? d.missing.map(m => `<div class="mrow ${m.days >= 2 ? 'late' : ''}"><div><b>${esc(m.so_no)}</b> <span class="m">${esc(m.customer || '')}</span><div class="m"><span class="nmc">${esc(m.driver_name || '')}</span></div></div><span class="pill ${m.days >= 2 ? 'bad' : 'warn'}">${m.days <= 0 ? 'today' : m.days + ' day' + (m.days > 1 ? 's' : '')}</span></div>`).join('') : '<div class="m">✓ Every delivered order has its POD.</div>');
   const s = Dash.st, bk = Number(LS.get('pod.backup') || 0), bd = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
@@ -3170,7 +3189,7 @@ async function autoTick(force) {
   if (Auto.busy || (!force && (!Auto.on || !autoSafe()))) return;
   Auto.busy = true;
   try {
-    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); renderDash(); nReopen(); }
+    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); await dashMerch(); renderDash(); nReopen(); }
     Auto.last = new Date();
   } catch (e) {} finally { Auto.busy = false; autoUI(); }
 }
@@ -3201,6 +3220,12 @@ function nAgo(dt) { const t = new Date(dt); if (isNaN(t)) return ''; const d = M
 function nBody(k, d) {
   const row = (a, b, c, pill) => `<div class="nd"><div><b>${esc(a)}</b> <span class="m">${esc(b || '')}</span><div class="m">${c}</div></div>${pill ? `<span class="pill warn">${esc(pill)}</span>` : ''}</div>`;
   let list = '', go = '', lbl = '';
+  if (k.startsWith('m:') || k.startsWith('mlate:')) {
+    const nm = k.slice(k.indexOf(':') + 1), late = k.startsWith('mlate:');
+    const rs = (Dash.mo || []).filter(r => r.driver_name === nm && (!late || mAge(r) >= 2));
+    const ag = r => { const a = mAge(r); return a <= 0 ? 'today' : a + ' day' + (a > 1 ? 's' : ''); };
+    return (rs.length ? rs.map(r => `<div class="nd"><div><b>${esc(r.so_no)}</b> <span class="m">${esc(r.customer || '')}</span><div class="m">${esc(r.handed_by || '')} → <b>${esc(nm)}</b></div></div><span class="pill ${mAge(r) >= 2 ? 'bad' : 'warn'}">${ag(r)}</span></div>`).join('') : '<div class="m">Nothing here now.</div>') + `<button type="button" class="nopen" data-dgo="orders:merch">Open in Orders ›</button>`;
+  }
   if (k === 'missing') { list = d.missing.map(m => row(m.so_no, m.customer, '<span class="nmc">' + esc(m.driver_name || '') + '</span> · delivered, no POD photo yet', m.days <= 0 ? 'today' : m.days + ' day' + (m.days > 1 ? 's' : ''))).join(''); go = 'orders:pod_pending'; lbl = 'Open in Orders'; }
   else {
     const r = Dash.det[k];
@@ -3227,6 +3252,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-nx]'); if (!b) return;
   const k = b.dataset.nx, box = document.querySelector('[data-nb="' + k + '"]'), open = Dash.open.has(k);
   if (open) Dash.open.delete(k); else Dash.open.add(k);
+  if (k.startsWith('m:')) { renderDash(); return; }
   box.hidden = open; b.setAttribute('aria-expanded', String(!open)); b.querySelector('b').textContent = open ? 'Details ⌄' : 'Hide ⌃';
   if (!open) { box.innerHTML = nBody(k, Dash.d); delete Dash.det[k]; box.innerHTML = nBody(k, Dash.d); nLoad(k); }
 });
