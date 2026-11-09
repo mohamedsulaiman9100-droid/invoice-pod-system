@@ -520,6 +520,10 @@ button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inher
 .dupsum{margin:8px 0;padding:10px 12px;border-radius:12px;font-size:14px;background:#e4f5ec;color:#0e5c40}
 .dupsum.some{background:#fff0cc;color:#6b4c00}.dupsum.all{background:#fdecea;color:#b3261e}
 #tripGo:disabled{opacity:.45;cursor:not-allowed}
+.k.att{background:#ffe3b3;color:#8a4b00}
+.att-h{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#5c6878;margin:12px 0 6px}
+#ordList li.hint{display:block;background:#fff0cc;color:#6b4c00;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:8px;grid-column:1/-1}
+body.adm main{padding-bottom:160px}
 </style>
 </head>
 <body class="booting">
@@ -2435,13 +2439,13 @@ function parseAssignGrid(grid) {
 const ST = {unassigned: {t: 'Unassigned', k: 'un'}, assigned: {t: 'Assigned', k: 'as'}, out: {t: 'Out for delivery', k: 'out'}, pod_pending: {t: 'Delivered · POD pending', k: 'pp'},
   complete: {t: 'Complete', k: 'dl'}, handed_over: {t: 'Handed over', k: 'hm'}, returned: {t: 'Returned', k: 'rt'}};
 const stOf = r => isMerch(r) && session && session.role === 'admin' ? {t: 'With ' + r.driver_name, k: 'out'} : r.status === 'unassigned' && r.flag === 'not_picked' ? {t: 'Not picked', k: 'np'} : (r.status === 'returned' && r.hub_received_at ? {t: 'Returned · at hub', k: 'rt'} : ST[r.status] || ST.assigned);
-const kchip = r => { const s = stOf(r); return `<span class="k ${s.k}">${s.t}</span>`; };
+const kchip = r => { const s = stOf(r); return (r.attempt > 1 ? `<span class="k att">${r.attempt}${r.attempt === 2 ? 'nd' : r.attempt === 3 ? 'rd' : 'th'} attempt</span> ` : '') + `<span class="k ${s.k}">${s.t}</span>`; };
 const isMerch = r => r.status === 'out' && r.handed_by_id && r.driver_id !== r.handed_by_id && !r.return_from;
-const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? (r.hub_received_at ? 'closed' : 'returned') : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
+const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? 'returned' : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
   returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone',
-  to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
+  reassigned: i => 'Sent out again: ' + (i || ''), to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
 const evTime = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'), hm = p(d.getHours()) + ':' + p(d.getMinutes()); return dateKey(d) === dateKey() ? hm : d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + hm; };
 function stackBar(list) {
   const n = list.length || 1, c = f => list.filter(f).length;
@@ -2601,7 +2605,7 @@ document.addEventListener('click', async e => {
 /* =============== admin: Orders tab =============== */
 const Ord = {rows: [], drivers: [], f: 'unassigned', q: '', drv: '', sel: new Set(), parsed: null, pick: null};
 const ageTxt = t => { const d = Math.floor((Date.now() - new Date(t)) / 864e5); return isNaN(d) ? '' : d <= 0 ? 'today' : d + ' day' + (d > 1 ? 's' : ''); };
-const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['merch', 'With merchandiser', '#a779d9'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned, not at hub', '#e26b61'], ['closed', 'Closed', '#35c28e']];
+const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['merch', 'With merchandiser', '#a779d9'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned', '#e26b61'], ['closed', 'Closed', '#35c28e']];
 async function loadOrderDrivers() {
   try { const res = await api('/rest/v1/profiles?select=id,display_name&role=eq.driver&order=display_name'); if (res.ok) Ord.drivers = await res.json(); } catch (e) {}
   $('#ordDrv').innerHTML = '<option value="">All drivers</option>' + Ord.drivers.map(d => `<option>${esc(d.display_name)}</option>`).join('');
@@ -2629,7 +2633,8 @@ function renderOrders() {
   const open = Ord.rows.filter(r => ['unassigned', 'assigned'].includes(r.status)).length;
   const dot = $('#cnt-orders'); if (dot) { const n = Ord.rows.filter(r => r.status === 'unassigned').length; dot.hidden = !n; dot.textContent = n; }
   const vis = ordShown();
-  $('#ordList').innerHTML = vis.length ? vis.map(r => {
+  const hint = vis.some(r => r.status === 'returned') ? '<li class="hint">↩ Returned and received at hub: select, then tap <b>Assign</b> to send out again (same or another driver). Not at hub yet: open it and tap <b>Received at hub</b> first.</li>' : '';
+  $('#ordList').innerHTML = vis.length ? hint + vis.map(r => {
     const selectable = true;
     const sub = r.status === 'unassigned' && r.flag === 'not_picked' ? `Not picked by ${esc(r.prev_driver || 'driver')}: ${esc(r.note || '')}` : r.driver_name ? (r.handed_by && r.driver_id !== r.handed_by_id && !r.return_from ? esc(r.handed_by) + ' → <b>' + esc(r.driver_name) + '</b> (merchandiser)' + (r.status === 'out' && ageTxt(r.handed_at || r.updated_at) ? ' · ' + ageTxt(r.handed_at || r.updated_at) : '') : 'Driver: ' + esc(r.driver_name)) + (r.return_from ? ' · ↩ return from ' + esc(r.return_from) : '') : '';
     return `<li class="ord" data-id="${r.id}">${selectable ? `<button class="rb ${Ord.sel.has(r.id) ? 'on' : ''}" data-osel="${r.id}" type="button" aria-label="Select"></button>` : '<span></span>'}`
@@ -2638,7 +2643,7 @@ function renderOrders() {
   const allB = $('#ordAll'), on = vis.length && vis.every(r => Ord.sel.has(r.id));
   allB.hidden = !vis.length; $('#ordAllBox').classList.toggle('on', !!on); $('#ordAllTxt').textContent = (on ? 'Clear selection' : 'Select all') + ' (' + vis.length + ')';
   const n = Ord.sel.size; $('#ordBar').hidden = !n; $('#ordSel').textContent = n + ' selected';
-  const st = [...Ord.sel].map(id => (Ord.rows.find(r => r.id === id) || {}).status), canAsg = n && st.every(s => ['unassigned', 'assigned'].includes(s)); $('#ordUnasg').hidden = !(n && st.every(s => s === 'assigned')); $('#ordAsg').hidden = !canAsg;
+  const st = [...Ord.sel].map(id => (Ord.rows.find(r => r.id === id) || {}).status), canAsg = n && [...Ord.sel].every(id => { const r = Ord.rows.find(x => x.id === id) || {}; return ['unassigned', 'assigned'].includes(r.status) || (r.status === 'returned' && r.hub_received_at); }); $('#ordUnasg').hidden = !(n && st.every(s => s === 'assigned')); $('#ordAsg').hidden = !canAsg;
 }
 async function delOrders(ids) {
   const res = await api('/rest/v1/assignments?id=in.(' + ids.join(',') + ')', {method: 'DELETE'});
@@ -2654,37 +2659,57 @@ async function openOrderDetail(id) {
   try {
     const res = await api('/rest/v1/order_events?select=at,actor,kind,info&assignment_id=eq.' + id + '&order=at.asc'); if (!res.ok) throw 0;
     const ev = await res.json();
-    $('#ordHist').innerHTML = ev.length ? ev.map(x => `<div class="w"><div class="ln"><span class="ic ${/pod|hub|complete/.test(x.kind) ? 'g' : /assign|uploaded/.test(x.kind) ? 'a' : /not_picked|returned/.test(x.kind) ? 'r' : ''}">●</span><div><b>${esc((EV[x.kind] || (() => x.kind))(x.info))}</b><small>${evTime(x.at)} · ${esc(x.actor || '')}</small></div></div></div>`).join('') : '<div class="m">No history yet.</div>';
+    const row = x => `<div class="w"><div class="ln"><span class="ic ${/pod|hub|complete/.test(x.kind) ? 'g' : /assign|uploaded|reassigned/.test(x.kind) ? 'a' : /not_picked|returned/.test(x.kind) ? 'r' : ''}">●</span><div><b>${esc((EV[x.kind] || (() => x.kind))(x.info))}</b><small>${x.at ? evTime(x.at) : ''}${x.actor ? ' · ' + esc(x.actor) : ''}${x.old ? ' · older record' : ''}</small></div></div></div>`;
+    let evs = ev;
+    if (!evs.length) { evs = []; if (r.driver_name) evs.push({kind: 'assigned', info: r.driver_name, at: r.work_date + 'T08:00', old: true}); if (r.delivered_at) evs.push({kind: 'delivered', at: r.delivered_at, old: true}); if (r.status === 'returned') evs.push({kind: 'returned', info: r.note, at: r.updated_at, old: true}); if (r.hub_received_at) evs.push({kind: 'hub_received', at: r.hub_received_at, old: true}); }
+    const multi = evs.some(x => x.kind === 'reassigned'); let att = 1, out = multi ? '<div class="att-h">Attempt 1</div>' : '';
+    evs.forEach(x => { if (x.kind === 'reassigned') { att++; out += '<div class="att-h">Attempt ' + att + '</div>'; } out += row(x); });
+    $('#ordHist').innerHTML = out || '<div class="m">No history yet.</div>';
   } catch (e) { $('#ordHist').innerHTML = '<div class="m">Could not load history.</div>'; }
 }
 function openAssignSheet() {
   Ord.pick = null; const n = Ord.sel.size, today = {};
   Ord.rows.forEach(r => { if (r.driver_name && ['assigned', 'out', 'pod_pending'].includes(r.status)) today[r.driver_name] = (today[r.driver_name] || 0) + 1; });
-  $('#asgTitle').textContent = `Assign ${n} order${n > 1 ? 's' : ''}`;
+  const again = [...Ord.sel].some(id => (Ord.rows.find(x => x.id === id) || {}).status === 'returned');
+  $('#asgTitle').textContent = `Assign ${n} order${n > 1 ? 's' : ''}${again ? ' again' : ''}`;
   $('#asgList').innerHTML = Ord.drivers.map(d => `<button type="button" class="dr" data-drv="${d.id}"><span class="r"></span><b>${esc(d.display_name)}</b><small>${today[d.display_name] || 0} open</small></button>`).join('') || '<div class="m">No drivers yet.</div>';
   $('#asgOk').disabled = true; $('#asgOk').textContent = 'Assign'; $('#asgSheet').hidden = false;
 }
 async function tripExist(day) {
   if (Ord.existDay === day) return;
-  const set = new Set(); let okq = false;
-  try { const r = await api('/rest/v1/assignments?select=so_no,work_date&work_date=eq.' + day + '&limit=3000'); if (r.ok) { (await r.json()).filter(x => x.work_date === day).forEach(x => set.add(x.so_no)); okq = true; } } catch (e) {}
-  Ord.exist = set; Ord.existDay = okq ? day : null;
+  const set = new Set(); const ret = new Map(); let okq = false;
+  try {
+    const r = await api('/rest/v1/assignments?select=so_no,work_date&work_date=eq.' + day + '&limit=3000'); if (r.ok) { (await r.json()).filter(x => x.work_date === day).forEach(x => set.add(x.so_no)); okq = true; }
+    const q = await api('/rest/v1/assignments?select=so_no,status,hub_received_at&status=eq.returned&limit=3000'); if (q.ok) (await q.json()).filter(x => x.status === 'returned').forEach(x => ret.set(x.so_no, !!x.hub_received_at));
+  } catch (e) {}
+  Ord.exist = set; Ord.ret = ret; Ord.existDay = okq ? day : null;
+}
+function tripSplit() {
+  const P = Ord.parsed, day = $('#tripDate').value || dateKey(), ok = Ord.existDay === day, ex = ok ? Ord.exist : new Set(), ret = ok ? Ord.ret : new Map();
+  const dup = [], again = [], wait = [], fresh = [];
+  P.rows.forEach(r => { if (ex.has(r.so)) dup.push(r); else if (ret.has(r.so)) (ret.get(r.so) ? again : wait).push(r); else fresh.push(r); });
+  return {dup, again, wait, fresh, day};
 }
 function renderTripPreview() {
   const box = $('#tripPreview'), P = Ord.parsed;
   if (!P) { box.hidden = true; return; }
   const day = $('#tripDate').value || dateKey();
   if (Ord.existDay !== day) { tripExist(day).then(() => { if (Ord.parsed === P && Ord.existDay === day) renderTripPreview(); }); }
-  const ex = Ord.existDay === day ? Ord.exist : new Set();
-  const fresh = P.rows.filter(r => !ex.has(r.so)), dup = P.rows.length - fresh.length;
-  const names = new Map(); fresh.forEach(r => names.set(r.driver, (names.get(r.driver) || 0) + 1));
+  const {dup, again, wait, fresh} = tripSplit(), go = fresh.length + again.length;
+  const names = new Map(); fresh.concat(again).forEach(r => names.set(r.driver, (names.get(r.driver) || 0) + 1));
   const match = n => Ord.drivers.find(d => (d.display_name || '').toLowerCase() === n.toLowerCase());
   const lines = [...names.entries()].map(([n, c]) => match(n) ? `<div>✓ <b>${esc(n)}</b>: ${c} orders will be Assigned</div>` : `<div class="warn">• <b>${esc(n)}</b>: ${c} orders, no driver login with this name. They will be Unassigned.</div>`).join('');
   const dtxt = new Date(day + 'T12:00').toLocaleDateString([], {day: 'numeric', month: 'short'});
-  const sum = `<div class="dupsum ${dup ? (fresh.length ? 'some' : 'all') : 'none'}">` + (dup ? (fresh.length ? `<b>${fresh.length} new</b> · ⚠ ${dup} already added for ${esc(dtxt)} (skipped, not changed)` : `⚠ <b>All ${dup} orders are already added for ${esc(dtxt)}.</b> This looks like the same Excel again. Nothing new to add.`) : `<b>${fresh.length} new</b> orders. None of them is added yet.`) + '</div>';
+  const parts = [];
+  parts.push(`<b>${fresh.length} new</b>`);
+  if (again.length) parts.push(`↩ <b>${again.length} returned order${again.length > 1 ? 's' : ''}</b> will be assigned again (not duplicates)`);
+  if (dup.length) parts.push(`⚠ ${dup.length} already added for ${esc(dtxt)} (skipped, not changed)`);
+  if (wait.length) parts.push(`⚠ ${wait.length} returned, <b>not at hub yet</b> (skipped). Tap "Received at hub" first, then upload again`);
+  const cls = !go ? 'all' : (dup.length || wait.length) ? 'some' : 'none';
+  const sum = `<div class="dupsum ${cls}">` + (!go && dup.length && !again.length && !wait.length ? `⚠ <b>All ${dup.length} orders are already added for ${esc(dtxt)}.</b> This looks like the same Excel again. Nothing new to add.` : parts.join('<br>')) + '</div>';
   box.hidden = false;
   box.innerHTML = `<strong>${esc(P.name)}: ${P.rows.length} orders for ${esc($('#tripDate').value)}</strong>${sum}${lines}`
-    + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button"' + (dup && !fresh.length ? ' disabled' : '') + '>' + (dup && fresh.length ? 'Add ' + fresh.length + ' new orders' : 'Add orders') + '</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
+    + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button"' + (!go ? ' disabled' : '') + '>' + ((dup.length || wait.length) && go ? 'Add ' + go + ' orders' : 'Add orders') + '</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
 }
 async function tripFileChosen(file) {
   try {
@@ -2695,16 +2720,20 @@ async function tripFileChosen(file) {
 }
 async function tripAssign() {
   const P = Ord.parsed, day = $('#tripDate').value || dateKey(); if (!P) return;
-  const out = P.rows.map(r => {
-    const d = Ord.drivers.find(x => (x.display_name || '').toLowerCase() === r.driver.toLowerCase());
-    return {work_date: day, driver_id: d ? d.id : null, driver_name: d ? d.display_name : null, vehicle: r.vehicle || null, so_no: r.so, customer: r.customer || null, inv_no: null, status: d ? 'assigned' : 'unassigned'};
-  });
+  await tripExist(day);
+  const {again, fresh} = tripSplit();
+  const mapRow = r => { const d = Ord.drivers.find(x => (x.display_name || '').toLowerCase() === r.driver.toLowerCase()); return {work_date: day, driver_id: d ? d.id : null, driver_name: d ? d.display_name : null, vehicle: r.vehicle || null, so_no: r.so, customer: r.customer || null, inv_no: null, status: d ? 'assigned' : 'unassigned'}; };
   try {
-    const before = Ord.rows.length;
-    const res = await api('/rest/v1/assignments?on_conflict=work_date,so_no', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal'}, body: JSON.stringify(out)});
-    if (!res.ok) throw new Error('Server refused (' + res.status + ')');
+    let redone = 0;
+    if (again.length) { const res0 = await chgRpc('admin_reuse_returned', {p_rows: again.map(r => { const m = mapRow(r); return {so: m.so_no, driver_id: m.driver_id || '', vehicle: m.vehicle || '', customer: m.customer || ''}; })}); redone = (res0.done || []).length; }
+    let added = 0;
+    if (fresh.length) {
+      const res = await api('/rest/v1/assignments?on_conflict=work_date,so_no', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal'}, body: JSON.stringify(fresh.map(mapRow))});
+      if (!res.ok) throw new Error('Server refused (' + res.status + ')');
+      added = fresh.length;
+    }
     Ord.parsed = null; Ord.existDay = null; renderTripPreview(); await loadOrders();
-    const added = Ord.rows.length - before; toast(added + ' new order' + (added === 1 ? '' : 's') + ' added ✓' + (out.length - added > 0 ? ' (' + (out.length - added) + ' were already there)' : ''));
+    toast(added + ' new' + (redone ? ' + ' + redone + ' sent out again' : '') + ' ✓');
     Ord.f = Ord.rows.some(r => r.status === 'unassigned') ? 'unassigned' : 'assigned'; renderOrders();
   } catch (e) { toast(netMsg(e), true); }
 }
