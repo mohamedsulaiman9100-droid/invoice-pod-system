@@ -2679,7 +2679,7 @@ async function tripExist(day) {
   if (Ord.existDay === day) return;
   const set = new Set(); const ret = new Map(); let okq = false;
   try {
-    const r = await api('/rest/v1/assignments?select=so_no,work_date&work_date=eq.' + day + '&limit=3000'); if (r.ok) { (await r.json()).filter(x => x.work_date === day).forEach(x => set.add(x.so_no)); okq = true; }
+    const r = await api('/rest/v1/assignments?select=so_no,work_date,status&work_date=eq.' + day + '&limit=3000'); if (r.ok) { (await r.json()).filter(x => x.work_date === day && x.status !== 'returned').forEach(x => set.add(x.so_no)); okq = true; }
     const q = await api('/rest/v1/assignments?select=so_no,status,hub_received_at&status=eq.returned&limit=3000'); if (q.ok) (await q.json()).filter(x => x.status === 'returned').forEach(x => ret.set(x.so_no, !!x.hub_received_at));
   } catch (e) {}
   Ord.exist = set; Ord.ret = ret; Ord.existDay = okq ? day : null;
