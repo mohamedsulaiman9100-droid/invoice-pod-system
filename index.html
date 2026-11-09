@@ -3078,7 +3078,8 @@ const dayLabel = k => { const [y, m, d] = k.split('-').map(Number); return new D
 async function chgRpc(name, args) {
   const res = await api('/rest/v1/rpc/' + name, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(args)});
   if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { const j = await res.json(); if (j.message) m = j.message; } catch (e) {} throw new Error(m); }
-  return res.json();
+  const txt = await res.text(); if (!txt) return null;
+  try { return JSON.parse(txt); } catch (e) { return null; }
 }
 const chgEl = () => $(session && session.role === 'admin' ? '#chgBodyA' : '#chgBody');
 const Chg = {date: dateKey(), rows: [], open: null, loading: false};
