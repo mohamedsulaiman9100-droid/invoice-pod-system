@@ -514,6 +514,12 @@ button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inher
 .mbody .nd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
 .mbody .nd .m{font-size:12px}
 .mbody .nopen{appearance:none;background:none;border:0;color:#1b4f9c;font-weight:700;font-size:14px;padding:10px 0 0;cursor:pointer;width:100%;text-align:right}
+.cc.q{position:relative}
+.cc.q::after{content:"⏳ waiting to send";position:absolute;right:12px;top:10px;font-size:11px;font-weight:700;color:#8a6200;background:#fff0cc;border-radius:99px;padding:2px 9px}
+#aqBar{margin-bottom:10px}#aqBar .btn{margin-top:8px}
+.dupsum{margin:8px 0;padding:10px 12px;border-radius:12px;font-size:14px;background:#e4f5ec;color:#0e5c40}
+.dupsum.some{background:#fff0cc;color:#6b4c00}.dupsum.all{background:#fdecea;color:#b3261e}
+#tripGo:disabled{opacity:.45;cursor:not-allowed}
 </style>
 </head>
 <body class="booting">
@@ -583,7 +589,7 @@ button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inher
  <div id="viewCharges" hidden>
   <div class="toolbar"><strong>Outside vehicle charges</strong><span class="grow"></span><button class="btn" id="btnChgRef" type="button">↻ Refresh</button></div>
   <section class="card" style="margin-bottom:12px"><div id="chgBodyA"></div></section>
-  <section class="card" id="chgBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><div style="display:flex;gap:6px"><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
+  <section class="card" id="chgBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><div style="display:flex;gap:6px"><button class="btn sm" id="chgPdf" type="button">📄 Statement</button><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
  </div>
 
  <div id="viewDrivers" hidden>
@@ -687,6 +693,7 @@ button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inher
     <div class="body">
       <div class="banner" id="outbox" hidden></div>
       <section class="card warncard" id="podWarn" hidden></section>
+      <section class="card warncard" id="aqBar" hidden></section>
 
       <section class="card" id="cardTrip" hidden>
         <h3>Today's deliveries <span class="tripCount" id="tripCount"></span></h3>
@@ -2102,9 +2109,18 @@ async function syncOutbox() {
   finally { syncing = false; outboxState.busy = false; renderOutbox(); }
 }
 async function shrinkForUpload(blob) {
-  if (blob.size <= 700 * 1024) return blob;
-  return toJpeg(await fileToCanvas(blob, 2000), 0.8);
+  /* keep POD pages small (≈150 KB) so the free 1 GB storage lasts: try smaller size / quality until it fits */
+  const TARGET = 170 * 1024;
+  if (blob.size <= TARGET) return blob;
+  let best = blob;
+  for (const [side, q] of [[1800, 0.8], [1700, 0.72], [1600, 0.66], [1500, 0.6]]) {
+    const b = await toJpeg(await fileToCanvas(blob, side), q);
+    if (b.size < best.size) best = b;
+    if (b.size <= TARGET) break;
+  }
+  return best;
 }
+window.__shrink = shrinkForUpload;
 async function driverUpload() {
   const d = state.draft; if (!d) return;
   if (!isValidDigits(d.no)) {
@@ -2432,28 +2448,71 @@ function stackBar(list) {
   const seg = [['s-delivered', c(r => r.status === 'complete')], ['s-handed_over', c(r => r.status === 'handed_over')], ['s-returned', c(r => r.status === 'returned')], ['s-out', c(r => r.status === 'out' || r.status === 'pod_pending')]];
   return '<div class="stack" aria-hidden="true">' + seg.map(([k, v]) => v ? `<i class="${k}" style="width:${v / n * 100}%"></i>` : '').join('') + '</div>';
 }
-async function rpc(name, args) {
+async function rpcRaw(name, args) {
   const res = await api('/rest/v1/rpc/' + name, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(args)});
   if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { const j = await res.json(); if (j.message) m = j.message; } catch (e) {} throw new Error(m); }
 }
+/* ---- driver actions keep working with no internet: saved on the phone, sent later (in order) ---- */
+const AQ_NAMES = new Set(['driver_pick', 'driver_mark', 'driver_unreceive']);
+const aqKey = () => 'pod.aq.' + (session && session.uid);
+const aqGet = () => { try { return JSON.parse(LS.get(aqKey()) || '[]'); } catch (e) { return []; } };
+const aqSet = a => LS.set(aqKey(), JSON.stringify(a));
+let aqBusy = false;
+function aqStatus(it) { return it.name === 'driver_pick' ? (it.args.p_ok ? 'out' : 'unassigned') : it.name === 'driver_mark' ? it.args.p_status : null; }
+function aqOverlay() {
+  const q = aqGet(); if (!q.length) return;
+  q.forEach(it => { const i = Trip.rows.findIndex(r => r.id === it.args.p_id); if (i < 0) return; if (it.name === 'driver_unreceive') { Trip.rows.splice(i, 1); return; } Trip.rows[i].status = aqStatus(it) || Trip.rows[i].status; Trip.rows[i]._q = true; });
+}
+function aqUI() {
+  const b = $('#aqBar'); if (!b) return; const n = aqGet().length;
+  b.hidden = !n; if (n) b.innerHTML = '<b>⏳ ' + n + ' update' + (n > 1 ? 's' : '') + ' waiting for internet</b><div class="m">Saved on this phone. They are sent by themselves when the internet is back.</div><button class="btn sm" id="aqNow" type="button">Send now</button>';
+}
+async function aqFlush() {
+  if (aqBusy || !session || App.role !== 'driver') return; let q = aqGet(); if (!q.length) return;
+  aqBusy = true;
+  try {
+    while (q.length) {
+      const it = q[0];
+      try { await rpcRaw(it.name, it.args); } catch (x) { if (x instanceof NetError) break; toast((it.so ? it.so + ': ' : '') + (x.message || 'Could not send'), true); }
+      q.shift(); aqSet(q);
+    }
+  } finally { aqBusy = false; aqUI(); }
+}
+async function rpc(name, args) {
+  const drv = session && App.role === 'driver' && !session.demo && AQ_NAMES.has(name);
+  if (drv && aqGet().length) { aqPush(name, args); await aqFlush(); return; }   // keep the order: something is already waiting
+  try { await rpcRaw(name, args); }
+  catch (x) { if (drv && x instanceof NetError) { aqPush(name, args); return; } throw x; }
+}
+function aqPush(name, args) {
+  const row = Trip.rows.find(r => r.id === args.p_id), q = aqGet();
+  q.push({name, args, so: row && row.so_no, t: Date.now()}); aqSet(q);
+  aqOverlay(); renderTrip(); aqUI(); toast('No internet: saved on your phone ⏳');
+}
+addEventListener('online', () => { if (typeof loadTrip === 'function') loadTrip(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && session && App.role === 'driver' && aqGet().length) loadTrip(); });
+setInterval(() => { if (session && App.role === 'driver' && aqGet().length && !document.hidden) loadTrip(); }, 25000);
+document.addEventListener('click', e => { if (e.target.id === 'aqNow') { loadTrip().then(() => toast(aqGet().length ? 'Still no internet' : 'Sent ✓', !!aqGet().length)); } });
 const netMsg = x => x instanceof NetError ? 'Needs internet. Try again.' : (x.message || 'Failed');
 
 /* =============== driver: today's list =============== */
 const Trip = {rows: [], loaded: false, sheet: null};
 async function loadTrip() {
   if (!session || App.role !== 'driver' || session.demo) return;
+  await aqFlush();
   const from = dateKey(new Date(Date.now() - 7 * 86400000));
   try {
     const res = await api('/rest/v1/rpc/my_trip', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({p_from: from})});
     if (!res.ok) throw new Error('HTTP ' + res.status);
     Trip.rows = await res.json(); Trip.loaded = true; LS.set('pod.trip.' + session.uid, JSON.stringify(Trip.rows));
   } catch (e) { if (!Trip.loaded) { try { Trip.rows = JSON.parse(LS.get('pod.trip.' + session.uid) || '[]'); } catch (x) { Trip.rows = []; } } }
-  renderTrip(); navBadges();
+  aqOverlay(); renderTrip(); navBadges(); aqUI();
 }
 const ORDER = {assigned: 0, out: 1, pod_pending: 2, handed_over: 3, returned: 3, complete: 4};
 const isAway = r => session && r.driver_id && r.driver_id !== session.uid;
 function tripVisible() { const today = dateKey(); return Trip.rows.filter(r => r.work_date === today || ['assigned', 'out', 'pod_pending'].includes(r.status)).sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9)); }
-function tripCard(r) {
+function tripCard(r) { const h = tripCard0(r); return r._q ? h.replace('class="cc"', 'class="cc q"') : h; }
+function tripCard0(r) {
   if (isAway(r)) return `<div class="cc" style="--rail:var(--blue)"><span class="k hm">Handed to ${esc(r.driver_name || '')}</span><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div><div class="m">Now with <b class="nmc">${esc(r.driver_name || '')}</b> · ${esc(stOf(r).t)}</div></div>`;
   const rail = {assigned: 'var(--brass)', out: 'var(--blue)', pod_pending: 'var(--brass)', complete: 'var(--closed)', handed_over: 'var(--blue)', returned: 'var(--danger)'}[r.status];
   let chipx = '';
@@ -2605,21 +2664,33 @@ function openAssignSheet() {
   $('#asgList').innerHTML = Ord.drivers.map(d => `<button type="button" class="dr" data-drv="${d.id}"><span class="r"></span><b>${esc(d.display_name)}</b><small>${today[d.display_name] || 0} open</small></button>`).join('') || '<div class="m">No drivers yet.</div>';
   $('#asgOk').disabled = true; $('#asgOk').textContent = 'Assign'; $('#asgSheet').hidden = false;
 }
+async function tripExist(day) {
+  if (Ord.existDay === day) return;
+  const set = new Set(); let okq = false;
+  try { const r = await api('/rest/v1/assignments?select=so_no,work_date&work_date=eq.' + day + '&limit=3000'); if (r.ok) { (await r.json()).filter(x => x.work_date === day).forEach(x => set.add(x.so_no)); okq = true; } } catch (e) {}
+  Ord.exist = set; Ord.existDay = okq ? day : null;
+}
 function renderTripPreview() {
   const box = $('#tripPreview'), P = Ord.parsed;
   if (!P) { box.hidden = true; return; }
-  const names = new Map(); P.rows.forEach(r => names.set(r.driver, (names.get(r.driver) || 0) + 1));
+  const day = $('#tripDate').value || dateKey();
+  if (Ord.existDay !== day) { tripExist(day).then(() => { if (Ord.parsed === P && Ord.existDay === day) renderTripPreview(); }); }
+  const ex = Ord.existDay === day ? Ord.exist : new Set();
+  const fresh = P.rows.filter(r => !ex.has(r.so)), dup = P.rows.length - fresh.length;
+  const names = new Map(); fresh.forEach(r => names.set(r.driver, (names.get(r.driver) || 0) + 1));
   const match = n => Ord.drivers.find(d => (d.display_name || '').toLowerCase() === n.toLowerCase());
   const lines = [...names.entries()].map(([n, c]) => match(n) ? `<div>✓ <b>${esc(n)}</b>: ${c} orders will be Assigned</div>` : `<div class="warn">• <b>${esc(n)}</b>: ${c} orders, no driver login with this name. They will be Unassigned.</div>`).join('');
+  const dtxt = new Date(day + 'T12:00').toLocaleDateString([], {day: 'numeric', month: 'short'});
+  const sum = `<div class="dupsum ${dup ? (fresh.length ? 'some' : 'all') : 'none'}">` + (dup ? (fresh.length ? `<b>${fresh.length} new</b> · ⚠ ${dup} already added for ${esc(dtxt)} (skipped, not changed)` : `⚠ <b>All ${dup} orders are already added for ${esc(dtxt)}.</b> This looks like the same Excel again. Nothing new to add.`) : `<b>${fresh.length} new</b> orders. None of them is added yet.`) + '</div>';
   box.hidden = false;
-  box.innerHTML = `<strong>${esc(P.name)}: ${P.rows.length} orders for ${esc($('#tripDate').value)}</strong>${lines}`
-    + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button">Add orders</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
+  box.innerHTML = `<strong>${esc(P.name)}: ${P.rows.length} orders for ${esc($('#tripDate').value)}</strong>${sum}${lines}`
+    + '<div style="display:flex;gap:8px"><button class="btn primary" id="tripGo" type="button"' + (dup && !fresh.length ? ' disabled' : '') + '>' + (dup && fresh.length ? 'Add ' + fresh.length + ' new orders' : 'Add orders') + '</button><button class="btn" id="tripNo" type="button">Cancel</button></div>';
 }
 async function tripFileChosen(file) {
   try {
     if (!Ord.drivers.length) await loadOrderDrivers();
     const rows = parseAssignGrid(await readXlsxGrid(await file.arrayBuffer()));
-    Ord.parsed = {rows, name: file.name}; $('#tripMsg').hidden = true; renderTripPreview();
+    Ord.parsed = {rows, name: file.name}; $('#tripMsg').hidden = true; Ord.existDay = null; renderTripPreview();
   } catch (e) { Ord.parsed = null; renderTripPreview(); $('#tripMsg').hidden = false; $('#tripMsg').textContent = e.message || 'Could not read this file.'; }
 }
 async function tripAssign() {
@@ -2632,7 +2703,7 @@ async function tripAssign() {
     const before = Ord.rows.length;
     const res = await api('/rest/v1/assignments?on_conflict=work_date,so_no', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal'}, body: JSON.stringify(out)});
     if (!res.ok) throw new Error('Server refused (' + res.status + ')');
-    Ord.parsed = null; renderTripPreview(); await loadOrders();
+    Ord.parsed = null; Ord.existDay = null; renderTripPreview(); await loadOrders();
     const added = Ord.rows.length - before; toast(added + ' new order' + (added === 1 ? '' : 's') + ' added ✓' + (out.length - added > 0 ? ' (' + (out.length - added) + ' were already there)' : ''));
     Ord.f = Ord.rows.some(r => r.status === 'unassigned') ? 'unassigned' : 'assigned'; renderOrders();
   } catch (e) { toast(netMsg(e), true); }
@@ -3042,6 +3113,7 @@ document.addEventListener('click', async e => {
     }
     else if (t.closest('[data-chgrow]')) { const [d, id] = t.closest('[data-chgrow]').dataset.chgrow.split('|'); Chg.date = d; Chg.open = id; await loadChg(); if (Chg.open) $('#viewCharges').scrollIntoView(); else toast('No orders for this vehicle on that day', true); }
     else if (t.id === 'chgCsv') chgCsv();
+    else if (t.id === 'chgPdf') await withBusy('Building statement…', chgStatement);
     else if (t.id === 'btnChgRef') { Chg.open = null; await loadChg(); await loadChgReport(); toast('Refreshed'); }
     else if (t.id === 'btnKmRef') { await loadKmReport(); toast('Refreshed'); }
     else if (t.id === 'btnOrdRef') { await loadOrders(); toast('Refreshed'); }
@@ -3084,6 +3156,50 @@ async function refreshDriver() {
   setDTab(Dtab);
   await Promise.all([loadTrip(), loadKm(), loadMyPods(), loadTop()].map(p => Promise.resolve(p).catch(() => {})));
 }
+
+/* ---- printable statement (PDF): summary per vehicle/driver + day-by-day details ---- */
+async function chgStatement() {
+  const rows = ChgA.rows.slice().sort((a, b) => String(a.name).localeCompare(String(b.name)) || String(a.day).localeCompare(String(b.day)));
+  if (!rows.length) { toast('No charges in this period', true); return; }
+  const {PDFDocument, StandardFonts, rgb} = PDFLib, doc = await PDFDocument.create();
+  const F = await doc.embedFont(StandardFonts.Helvetica), FB = await doc.embedFont(StandardFonts.HelveticaBold);
+  const W = 595, H = 842, M = 40, navy = rgb(0.06, 0.15, 0.22), grey = rgb(0.4, 0.44, 0.5), line = rgb(0.85, 0.87, 0.9), red = rgb(0.7, 0.15, 0.12);
+  const safe = t => String(t == null ? '' : t).replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');
+  const from = $('#chgFrom').value, to = $('#chgTo').value;
+  let page, y;
+  const newPage = () => { page = doc.addPage([W, H]); y = H - M; };
+  const text = (t, x, yy, o = {}) => { const f = o.bold ? FB : F, sz = o.size || 9, s = safe(t), w = f.widthOfTextAtSize(s, sz); page.drawText(s, {x: o.right ? x - w : x, y: yy, size: sz, font: f, color: o.color || navy}); };
+  const cols = [['Date', 0, false], ['Vehicle', 62, false], ['Deliv.', 235, true], ['Ret.', 275, true], ['Delivery', 335, true], ['Labour', 395, true], ['Return', 455, true], ['Total', 515, true]];
+  const head = (c) => { page.drawRectangle({x: M, y: y - 4, width: W - 2 * M, height: 16, color: rgb(0.93, 0.95, 0.97)}); cols.forEach(([t, x, r]) => text(t, M + x, y, {bold: true, size: 8.5, right: r, color: grey})); y -= 18; };
+  const money = n => fmtAmt(n);
+  newPage();
+  text('Outside vehicle charges: Statement', M, y, {bold: true, size: 17}); y -= 20;
+  text('Period: ' + from + ' to ' + to, M, y, {size: 10, color: grey}); text('Generated ' + new Date().toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}), W - M, y, {size: 9, color: grey, right: true}); y -= 26;
+  /* summary per driver */
+  const by = new Map(); rows.forEach(r => { const o = by.get(r.name) || {days: 0, del: 0, ret: 0, dc: 0, lb: 0, rc: 0, tot: 0}; o.days++; o.del += Number(r.delivered || 0); o.ret += Number(r.returned || 0); o.dc += Number(r.delivery || 0); o.lb += Number(r.labour || 0); o.rc += Number(r.return_charge || 0); o.tot += chgRowTotal(r); by.set(r.name, o); });
+  text('Summary', M, y, {bold: true, size: 12}); y -= 18;
+  const sc = [['Driver / vehicle', 0, false], ['Days', 175, true], ['Deliv.', 215, true], ['Ret.', 255, true], ['Delivery', 335, true], ['Labour', 395, true], ['Return', 455, true], ['Total', 515, true]];
+  page.drawRectangle({x: M, y: y - 4, width: W - 2 * M, height: 16, color: rgb(0.93, 0.95, 0.97)}); sc.forEach(([t, x, r]) => text(t, M + x, y, {bold: true, size: 8.5, right: r, color: grey})); y -= 18;
+  const G = {days: 0, del: 0, ret: 0, dc: 0, lb: 0, rc: 0, tot: 0};
+  by.forEach((o, nm) => { if (y < 90) { newPage(); }
+    text(nm, M, y, {bold: true}); text(o.days, M + 175, y, {right: true}); text(o.del, M + 215, y, {right: true}); text(o.ret, M + 255, y, {right: true}); text(money(o.dc), M + 335, y, {right: true}); text(money(o.lb), M + 395, y, {right: true}); text(money(o.rc), M + 455, y, {right: true}); text(money(o.tot), M + 515, y, {right: true, bold: true});
+    page.drawLine({start: {x: M, y: y - 5}, end: {x: W - M, y: y - 5}, thickness: .5, color: line}); y -= 17; Object.keys(G).forEach(k => G[k] += o[k]); });
+  y -= 4; page.drawRectangle({x: M, y: y - 6, width: W - 2 * M, height: 22, color: navy});
+  text('GRAND TOTAL (AED)', M + 8, y + 1, {bold: true, size: 10, color: rgb(1, 1, 1)}); text(money(G.tot), M + 508, y + 1, {bold: true, size: 11, right: true, color: rgb(0.89, 0.72, 0.36)}); y -= 34;
+  /* details per driver */
+  by.forEach((o, nm) => {
+    const mine = rows.filter(r => r.name === nm);
+    if (y < 120) newPage();
+    text(nm, M, y, {bold: true, size: 12}); y -= 16; head();
+    mine.forEach(r => { if (y < 70) { newPage(); text(nm + ' (continued)', M, y, {bold: true, size: 11}); y -= 16; head(); }
+      text(r.day, M, y); text(r.vehicle || '', M + 62, y); text(r.delivered, M + 235, y, {right: true}); text(r.returned, M + 275, y, {right: true}); text(money(r.delivery), M + 335, y, {right: true}); text(money(r.labour), M + 395, y, {right: true}); text(money(r.return_charge), M + 455, y, {right: true}); text(money(chgRowTotal(r)), M + 515, y, {right: true, bold: true});
+      page.drawLine({start: {x: M, y: y - 5}, end: {x: W - M, y: y - 5}, thickness: .4, color: line}); y -= 15; });
+    text('Total ' + nm, M, y - 2, {bold: true, color: red}); text(money(o.tot), M + 515, y - 2, {bold: true, right: true, color: red}); y -= 32;
+  });
+  const n = doc.getPageCount(); doc.getPages().forEach((pg, i) => { page = pg; text('Page ' + (i + 1) + ' of ' + n, W / 2 + 20, 22, {size: 8, color: grey, right: true}); });
+  const bytes = await doc.save();
+  downloadBlob(new Blob([bytes], {type: 'application/pdf'}), 'Outside_charges_statement_' + from + '_to_' + to + '.pdf');
+}
 /* =============== Today dashboard, missing PODs, storage / backup / cleanup =============== */
 const Dash = {d: null, st: null, days: 30, open: new Set(), det: {}};
 const fmtSize = b => { b = Number(b || 0); return b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.round(b / 1e3) + ' KB'; };
@@ -3092,6 +3208,7 @@ async function loadDash() {
   if (!session || session.role !== 'admin' || session.demo) return;
   try { Dash.d = await chgRpc('dash_today', {}); } catch (e) { toast(netMsg(e), true); }
   await dashMerch();
+  try { Dash.bk = await chgRpc('backup_info', {}); } catch (e) {}
   try { Dash.st = await chgRpc('storage_usage', {p_days: Dash.days}); } catch (e) {}
   renderDash();
 }
@@ -3103,6 +3220,7 @@ async function dashMerch() {
   } catch (e) { Dash.mo = Dash.mo || []; }
 }
 function mAge(r) { const d = Math.floor((Date.now() - new Date(r.handed_at || r.updated_at)) / 864e5); return isNaN(d) ? 0 : Math.max(0, d); }
+function bkMs() { const a = Dash.bk && Dash.bk.at ? new Date(Dash.bk.at).getTime() : 0, b = Number(LS.get('pod.backup') || 0); return Math.max(a, b); }
 function dashBadge() { const b = $('#cnt-today'); if (!b) return; const n = Dash.d ? Dash.d.missing.length : 0; b.hidden = !n; b.textContent = n > 99 ? '99+' : n; }
 function renderDash() {
   const el = $('#dashBody'); if (!el) return; const d = Dash.d; dashBadge();
@@ -3114,6 +3232,7 @@ function renderDash() {
   if (d.missing.length) act.push(['missing', d.missing.length + ' POD' + (d.missing.length > 1 ? 's' : '') + ' missing' + (late ? ' · ' + late + ' late' : '')]);
   const lateM = {}; (Dash.mo || []).filter(r => mAge(r) >= 2).forEach(r => { lateM[r.driver_name] = (lateM[r.driver_name] || 0) + 1; });
   Object.keys(lateM).forEach(nm => act.push(['mlate:' + nm, lateM[nm] + ' order' + (lateM[nm] > 1 ? 's' : '') + ' with ' + nm + ' for 2+ days']));
+  { const bm = bkMs(), bd2 = bm ? Math.floor((Date.now() - bm) / 864e5) : null; if (bd2 === null || bd2 >= 7) act.push(['backup', bd2 === null ? 'No backup made yet' : 'Backup is ' + bd2 + ' days old']); }
   if (n('returned')) act.push(['returned', n('returned') + ' returned, not at hub']);
   if (n('unassigned')) act.push(['unassigned', n('unassigned') + ' order' + (n('unassigned') > 1 ? 's' : '') + ' not given to a driver']);
   if (d.not_assigned) act.push(['unmatched', d.not_assigned + ' uploaded POD' + (d.not_assigned > 1 ? 's' : '') + ' not matched to an invoice']);
@@ -3125,7 +3244,7 @@ function renderDash() {
   if ((d.with_merch || []).length) h += `<h3 class="dh">With merchandisers <span class="m">· waiting for POD or return</span></h3>` + d.with_merch.map(w => { const k = 'm:' + w.name, op = Dash.open.has(k); return `<div class="mcard"><button type="button" class="mrow ${w.days >= 3 ? 'late' : ''}" data-nx="${esc(k)}" aria-expanded="${op}"><div><b class="nmc">${esc(w.name)}</b><div class="m">${w.n} order${w.n > 1 ? 's' : ''}${w.returns ? ' · ' + w.returns + ' return' + (w.returns > 1 ? 's' : '') : ''}</div></div><span class="pill ${w.days >= 3 ? 'bad' : w.days >= 1 ? 'warn' : ''}">${w.days <= 0 ? 'today' : w.days + ' day' + (w.days > 1 ? 's' : '')} ${op ? '⌃' : '⌄'}</span></button><div class="nbody mbody" data-nb="${esc(k)}" ${op ? '' : 'hidden'}>${nBody(k, d)}</div></div>`; }).join('');
   h += `<h3 class="dh">Drivers today</h3>` + (d.drivers.length ? d.drivers.map(x => { const done = x.complete + x.handed_over; return `<div class="drow"><div><b class="nmc">${esc(x.name)}</b><div class="m">${done} of ${x.total} done${x.open ? ' · ' + x.open + ' still out' : ''}${x.returned ? ' · ' + x.returned + ' returned' : ''}</div><div class="stack"><i class="s-delivered" style="width:${done / x.total * 100}%"></i><i class="s-out" style="width:${x.pod_pending / x.total * 100}%"></i><i class="s-returned" style="width:${x.returned / x.total * 100}%"></i></div></div>${x.pod_pending ? `<span class="pill bad">${x.pod_pending} POD missing</span>` : done === x.total ? '<span class="pill ok">All done</span>' : ''}</div>`; }).join('') : '<div class="m">No orders assigned for today.</div>');
   h += `<h3 class="dh">POD missing <span class="m">· delivered but no photo yet</span></h3>` + (d.missing.length ? d.missing.map(m => `<div class="mrow ${m.days >= 2 ? 'late' : ''}"><div><b>${esc(m.so_no)}</b> <span class="m">${esc(m.customer || '')}</span><div class="m"><span class="nmc">${esc(m.driver_name || '')}</span></div></div><span class="pill ${m.days >= 2 ? 'bad' : 'warn'}">${m.days <= 0 ? 'today' : m.days + ' day' + (m.days > 1 ? 's' : '')}</span></div>`).join('') : '<div class="m">✓ Every delivered order has its POD.</div>');
-  const s = Dash.st, bk = Number(LS.get('pod.backup') || 0), bd = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
+  const s = Dash.st, bk = bkMs(), bd = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
   const pct = (b, lim) => Math.min(100, Math.round(b / lim * 100)), sp = s ? pct(s.storage_bytes, 1e9) : 0, dp = s ? pct(s.db_bytes, 5e8) : 0;
   const bar = p => `<div class="meter"><i class="${p >= 90 ? 'bad' : p >= 70 ? 'warn' : ''}" style="width:${Math.max(p, 2)}%"></i></div>`;
   h += `<h3 class="dh">Storage &amp; backup</h3><div class="dcard">` + (s ? `
@@ -3133,7 +3252,7 @@ function renderDash() {
     <div class="mline" style="margin-top:12px"><b>Database</b><span>${fmtSize(s.db_bytes)} of 500 MB · ${dp}%</span></div>${bar(dp)}
     <div class="m" style="margin-top:6px">${s.files} photo files stored.${sp >= 70 ? ' <b style="color:var(--danger,#e5484d)">Space is getting full — free some space below.</b>' : ''}</div>` : '<div class="m">Could not read storage size.</div>') + `</div>
   <div class="dcard"><b>Backup</b><div class="m" style="margin:4px 0 10px">Orders, km, charges, PODs list and history as Excel-ready files in one ZIP (photos are not included — you already download those).</div>
-    <div class="m ${bd === null || bd > 7 ? 'late-txt' : ''}">${bd === null ? '⚠ No backup made from this phone yet.' : bd > 7 ? '⚠ Last backup ' + agoTxt(Date.now() - bk) + ' — time for a new one.' : '✓ Last backup ' + agoTxt(Date.now() - bk) + '.'}</div>
+    <div class="m ${bd === null || bd > 7 ? 'late-txt' : ''}">${bd === null ? '⚠ No backup made yet.' : bd > 7 ? '⚠ Last backup ' + agoTxt(Date.now() - bk) + ' — time for a new one.' : '✓ Last backup ' + agoTxt(Date.now() - bk) + (Dash.bk && Dash.bk.by ? ' by ' + esc(Dash.bk.by) : '') + '.'}</div>
     <button class="btn primary main" id="btnBackup" type="button" style="margin-top:10px">Download backup</button></div>
   <div class="dcard"><b>Free up space</b><div class="m" style="margin:4px 0 10px">Removes the photos of PODs you already downloaded. The record (SO number, driver, time) stays in the list and in your CSV/ZIP files; only the photo is gone.</div>
     <div class="cleanrow"><span>Older than</span><select id="cleanDays">${[14, 30, 60].map(x => `<option value="${x}" ${x === Dash.days ? 'selected' : ''}>${x} days</option>`).join('')}</select><span>after download</span></div>
@@ -3150,7 +3269,7 @@ async function makeBackup() {
     zip.file('README.txt', 'Alfa One backup made ' + new Date().toLocaleString() + '\r\nOpen the .csv files in Excel. backup.json holds the same data for restoring.\r\nPhotos are not included.');
     downloadBlob(await zip.generateAsync({type: 'blob', compression: 'DEFLATE'}), 'AlfaOne_backup_' + day + '.zip');
   });
-  LS.set('pod.backup', String(Date.now())); toast('Backup saved ✓'); renderDash();
+  LS.set('pod.backup', String(Date.now())); try { await chgRpc('backup_mark', {}); Dash.bk = await chgRpc('backup_info', {}); } catch (e) {} toast('Backup saved ✓'); renderDash();
 }
 async function cleanPhotos() {
   let removed = 0;
@@ -3169,7 +3288,7 @@ document.addEventListener('click', async e => {
   try {
     const g = t.closest('[data-dgo]'); if (g) { const [v, f] = g.dataset.dgo.split(':'); setView(v); if (f && typeof Ord !== 'undefined') { Ord.f = f; if (typeof renderOrders === 'function') renderOrders(); } return; }
     if (t.id === 'btnDashRef') { await loadDash(); toast('Refreshed'); }
-    else if (t.id === 'btnBackup') await makeBackup();
+    else if (t.id === 'btnBackup' || t.id === 'btnBackup2') await makeBackup();
     else if (t.id === 'btnClean') {
       if (t.dataset.arm !== '1') { t.dataset.arm = '1'; t.textContent = 'Tap again to remove the photos'; setTimeout(() => { if (t.isConnected) { t.dataset.arm = ''; t.textContent = 'Remove these photos'; } }, 4000); return; }
       await cleanPhotos();
@@ -3204,7 +3323,7 @@ async function autoTick(force) {
   if (Auto.busy || (!force && (!Auto.on || !autoSafe()))) return;
   Auto.busy = true;
   try {
-    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); await dashMerch(); renderDash(); nReopen(); }
+    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); await dashMerch(); try { Dash.bk = await chgRpc('backup_info', {}); } catch (e) {} renderDash(); nReopen(); }
     Auto.last = new Date();
   } catch (e) {} finally { Auto.busy = false; autoUI(); }
 }
@@ -3235,6 +3354,7 @@ function nAgo(dt) { const t = new Date(dt); if (isNaN(t)) return ''; const d = M
 function nBody(k, d) {
   const row = (a, b, c, pill) => `<div class="nd"><div><b>${esc(a)}</b> <span class="m">${esc(b || '')}</span><div class="m">${c}</div></div>${pill ? `<span class="pill warn">${esc(pill)}</span>` : ''}</div>`;
   let list = '', go = '', lbl = '';
+  if (k === 'backup') return '<div class="m" style="padding:8px 0">A backup keeps a copy of all orders, km, charges and the PODs list on your phone, in case anything is lost. Takes a few seconds.</div><button type="button" class="nopen" id="btnBackup2" style="text-align:center;background:#b3261e;color:#fff;border-radius:12px;padding:12px">⬇ Download backup now</button>';
   if (k.startsWith('m:') || k.startsWith('mlate:')) {
     const nm = k.slice(k.indexOf(':') + 1), late = k.startsWith('mlate:');
     const rs = (Dash.mo || []).filter(r => r.driver_name === nm && (!late || mAge(r) >= 2));
