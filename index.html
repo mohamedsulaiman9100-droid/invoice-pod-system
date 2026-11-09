@@ -607,7 +607,7 @@ button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inher
   </div>
   <button type="button" class="selall" id="ordAll" hidden><span class="rb" id="ordAllBox"></span><b id="ordAllTxt">Select all</b></button>
   <ul id="ordList" aria-live="polite"></ul>
-  <div class="ordbar" id="ordBar" hidden><b id="ordSel">0 selected</b><span class="grow"></span><button class="btn" id="ordUnasg" type="button" hidden>Unassign</button><button class="btn danger" id="ordDel" type="button">Delete</button><button class="btn brass" id="ordAsg" type="button">Assign driver</button></div>
+  <div class="ordbar" id="ordBar" hidden><b id="ordSel">0 selected</b><span class="grow"></span><button class="btn" id="ordExport" type="button">⬇ Export</button><button class="btn" id="ordUnasg" type="button" hidden>Unassign</button><button class="btn danger" id="ordDel" type="button">Delete</button><button class="btn brass" id="ordAsg" type="button">Assign driver</button></div>
  </div>
 </main>
 <footer class="note">Invoice format: INV + 7 digits (e.g. INV1234567). My invoices stay on this phone. Driver PODs are kept safely on the server.</footer>
@@ -2646,6 +2646,7 @@ document.addEventListener('click', async e => {
     if (t.id === 'ordDel') { if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Tap again: delete ' + Ord.sel.size; setTimeout(() => { t.dataset.armed = ''; t.textContent = 'Delete'; }, 4000); return; }
       t.dataset.armed = ''; t.textContent = 'Delete'; await delOrders([...Ord.sel]); return; }
     const pipe = t.closest('[data-pipe]'), sel = t.closest('[data-osel]'), row = t.closest('li.ord'), dr = t.closest('[data-drv]'), hub = t.closest('[data-hubrec]');
+    if (t.closest('#ordExport')) { ordExport(); return; }
     if (t.closest('#ordAll')) { const v = ordShown(), on = v.length && v.every(r => Ord.sel.has(r.id)); v.forEach(r => on ? Ord.sel.delete(r.id) : Ord.sel.add(r.id)); renderOrders(); }
     else if (t.id === 'btnTripUpload') $('#tripFile').click();
     else if (t.id === 'tripGo') await tripAssign();
@@ -2713,6 +2714,20 @@ document.addEventListener('click', async e => {
     else if (b && Link.pod) { await rpc('admin_link_pod', {p_pod: Link.pod.id, p_order: b.dataset.link}); $('#linkSheet').hidden = true; toast('Linked ✓'); await loadInbox(); }
   } catch (x) { toast(x.message && !(x instanceof NetError) ? x.message : netMsg(x), true); }
 });
+
+function ordExport() {
+  const rows = Ord.rows.filter(r => Ord.sel.has(r.id));
+  if (!rows.length) return toast('Select orders first', true);
+  const dt = v => v ? new Date(v).toLocaleString('en-GB', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'}) : '';
+  const st = r => isMerch(r) ? 'With merchandiser' : r.status === 'returned' ? (r.hub_received_at ? 'Returned · at hub' : 'Returned, not at hub') : (stOf(r) || {}).t || r.status;
+  const pod = r => r.status === 'complete' ? 'Uploaded' : r.status === 'pod_pending' || isMerch(r) ? 'Missing' : r.status === 'handed_over' ? 'Handed over' : '';
+  const head = ['Date', 'SO number', 'Customer', 'Status', 'Driver', 'Vehicle', 'Handed by', 'Merchandiser', 'Days with merchandiser', 'Delivered', 'POD', 'Hub received'];
+  const lines = [head.map(csvCell).join(',')].concat(rows.map(r => [r.work_date, r.so_no, r.customer, st(r), isMerch(r) ? (r.handed_by || '') : (r.driver_name || ''), r.vehicle, isMerch(r) ? (r.handed_by || '') : '', isMerch(r) ? r.driver_name : '', isMerch(r) ? mAgeDays(r) : '', dt(r.delivered_at), pod(r), dt(r.hub_received_at)].map(csvCell).join(',')));
+  const tag = 'Selected';
+  downloadBlob(new Blob(['\ufeff' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'}), 'Orders_' + ($('#tripDate').value || dateKey()) + (tag ? '_' + tag : '') + '.csv');
+  toast('Exported ' + rows.length + ' order' + (rows.length > 1 ? 's' : '') + ' ✓');
+}
+function mAgeDays(r) { const d = Math.floor((Date.now() - new Date(r.handed_at || r.updated_at)) / 864e5); return isNaN(d) ? '' : Math.max(0, d); }
 
 /* =============== kilometres (per-driver switch) =============== */
 async function kmRpc(name, args) {
