@@ -526,6 +526,13 @@ button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inher
 body.adm main{padding-bottom:160px}
 
 .tempf{display:flex;align-items:center;gap:10px}.tempf input{flex:1;font-size:26px!important;font-weight:700;text-align:center}.tempf span{font-size:18px;color:var(--muted,#8da0b4);font-weight:700}
+
+#mdl .pwbox{font-size:30px;font-weight:800;letter-spacing:.04em;text-align:center;padding:14px;border:1.5px dashed var(--line);border-radius:12px;margin:12px 0}
+.repTabs{display:flex;gap:8px;margin-bottom:10px}.reprange{display:flex;gap:8px;align-items:center;margin-bottom:8px}.reprange input{flex:1;min-width:0;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}.repq{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.rh{margin:18px 0 6px}.rbar{margin:8px 0}.rbar .rl,.rrow{display:flex;justify-content:space-between;gap:8px}.rbar .rt{height:10px;background:var(--bg);border-radius:6px;overflow:hidden;margin-top:3px}.rbar .rt i{display:block;height:100%;background:var(--brass,#e2b75b)}.rrow{padding:7px 0;border-bottom:1px solid var(--line)}
+.rtab{width:100%;border-collapse:collapse;font-size:14px}.rtab th{color:var(--muted,#6b7a8c);font-weight:600;text-align:right;padding:6px 4px}.rtab td{padding:9px 4px;text-align:right;border-bottom:1px solid var(--line)}.rtab th:first-child,.rtab td:first-child{text-align:left}.rtab td.bad{color:var(--danger,#e5484d);font-weight:700}.rdrv{cursor:pointer}.rtab.sm{font-size:13px}.rdet td{background:var(--bg)}
+.arow{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.arow:last-child{border:0}
+body.adm #moreSheet{min-width:190px}
 </style>
 </head>
 <body class="booting">
@@ -534,7 +541,7 @@ body.adm main{padding-bottom:160px}
   <div class="hdr-actions"><button class="btn primary" id="btnNew" type="button">+ New invoice</button><button class="btn" id="btnSignOut" type="button" hidden>Sign out</button></div>
 </div></header>
 <nav class="viewbar" id="viewBar" hidden><div class="wrap"><div class="tabs" role="tablist" aria-label="Section"><button class="vtab" role="tab" data-view="today" aria-selected="false"><span class="vi">📊</span>Today<span class="dot" id="cnt-today" hidden>0</span></button><button class="vtab" role="tab" data-view="invoices" aria-selected="true"><span class="vi">🧾</span>Invoices</button><button class="vtab" role="tab" data-view="inbox" aria-selected="false"><span class="vi">📥</span>PODs<span class="dot" id="cnt-inbox" hidden>0</span></button><button class="vtab" role="tab" data-view="orders" aria-selected="false"><span class="vi">📦</span>Orders<span class="dot" id="cnt-orders" hidden>0</span></button><button class="vtab" role="tab" data-view="drivers" aria-selected="false"><span class="vi">👥</span>Drivers<span class="dot ok" id="cnt-online" hidden>0</span></button><button class="vtab" role="tab" data-view="km" aria-selected="false"><span class="vi">🚚</span>Km</button><button class="vtab" role="tab" data-view="charges" aria-selected="false"><span class="vi">💰</span>Charges</button><button class="mtab" type="button" id="navMore" aria-expanded="false"><span class="vi">☰</span>More</button></div></div></nav>
-<div id="moreSheet" hidden><button type="button" data-gov="invoices">🧾 Invoices</button><button type="button" data-gov="km">🚚 Km</button><button type="button" data-gov="charges">💰 Charges</button></div>
+<div id="moreSheet" hidden><button type="button" data-gov="invoices">🧾 Invoices</button><button type="button" data-gov="km">🚚 Km</button><button type="button" data-gov="charges">💰 Charges</button><button type="button" data-gov="reports">📊 Reports</button><button type="button" data-gov="activity">🕘 Activity log</button></div>
 
 <main class="wrap">
  <div id="viewInvoices">
@@ -595,7 +602,23 @@ body.adm main{padding-bottom:160px}
  <div id="viewCharges" hidden>
   <div class="toolbar"><strong>Outside vehicle charges</strong><span class="grow"></span><button class="btn" id="btnChgRef" type="button">↻ Refresh</button></div>
   <section class="card" style="margin-bottom:12px"><div id="chgBodyA"></div></section>
-  <section class="card" id="chgBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><div style="display:flex;gap:6px"><button class="btn sm" id="chgPdf" type="button">📄 Statement</button><button class="btn sm" id="chgPdfSo" type="button">📄 With SO rows</button><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
+  <section class="card" id="chgBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><div style="display:flex;gap:6px"><button class="btn sm" id="chgPdf" type="button">📄 Statement</button><button class="btn sm" id="chgPdfSo" type="button">📄 With SO rows</button><button class="btn sm" id="chgShare" type="button">↗ Share</button><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
+ </div>
+
+ <div id="viewReports" hidden>
+  <div class="toolbar"><strong>Reports</strong><span class="grow"></span><button class="btn" id="btnRepRef" type="button">↻ Refresh</button></div>
+  <section class="card">
+   <div class="repTabs"><button class="btn sm primary" type="button" data-reptab="returns">Returns</button><button class="btn sm" type="button" data-reptab="drivers">Drivers</button></div>
+   <div class="reprange"><input type="date" id="repFrom"><span>to</span><input type="date" id="repTo"></div>
+   <div class="repq"><button class="btn sm" type="button" data-repq="7">7 days</button><button class="btn sm" type="button" data-repq="30">30 days</button><button class="btn sm" type="button" data-repq="m">This month</button></div>
+   <div id="repBody"></div>
+  </section>
+ </div>
+
+ <div id="viewActivity" hidden>
+  <div class="toolbar"><strong>Activity log</strong><span class="grow"></span><button class="btn" id="btnActRef" type="button">↻ Refresh</button></div>
+  <div class="hint" style="margin:0 0 10px">Who deleted orders, invoices, PODs and logins.</div>
+  <section class="card"><div id="actBody"></div></section>
  </div>
 
  <div id="viewDrivers" hidden>
@@ -1492,6 +1515,7 @@ function rowHtml(r) {
       <button class="btn sm" data-act="edit" type="button">Open</button>
       <button class="btn sm" data-act="qphoto" type="button">📷 Add photo</button>
       <button class="btn sm" data-act="pdf" type="button" ${r.docs.length ? '' : 'disabled'}>PDF</button>
+      <button class="btn sm" data-act="share" type="button" ${r.docs.length ? '' : 'disabled'}>↗ Share</button>
       ${closed ? '<button class="btn sm" data-act="reopen" type="button">Reopen</button>' : '<button class="btn sm primary" data-act="close" type="button">Close</button>'}
       <button class="btn sm danger" data-act="del" type="button">Delete</button>
     </div></li>`;
@@ -1768,6 +1792,7 @@ document.addEventListener('click', async e => {
       else if (act === 'reopen') await setStatus(id, 'open');
       else if (act === 'del') await deleteRecord(id);
       else if (act === 'pdf') { await invHydrate(rec); await downloadCombined(rec.no, rec.docs); }
+      else if (act === 'share') { await invHydrate(rec); let bytes; await withBusy('Building PDF…', async () => { bytes = await buildCombinedPdf(rec.no, rec.docs); }); shareSheet(new Blob([bytes], {type: 'application/pdf'}), rec.no + '.pdf'); }
       return;
     }
     // editor actions
@@ -2300,7 +2325,7 @@ $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer' || e.
 
 let view = 'invoices';
 function setView(v) {
-  view = v; if (v === 'invoices' && typeof INV !== 'undefined' && INV.on) setTimeout(invRefresh, 0); $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewToday').hidden = v !== 'today'; $('#viewCharges').hidden = v !== 'charges'; $('#btnNew').hidden = v !== 'invoices';
+  view = v; if (v === 'invoices' && typeof INV !== 'undefined' && INV.on) setTimeout(invRefresh, 0); $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewToday').hidden = v !== 'today'; $('#viewCharges').hidden = v !== 'charges'; $('#viewReports').hidden = v !== 'reports'; $('#viewActivity').hidden = v !== 'activity'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (typeof navSync === 'function') navSync(v);
@@ -2310,6 +2335,8 @@ function setView(v) {
   if (v === 'km') loadKmReport();
   if (v === 'today') loadDash();
   if (v === 'charges') { Chg.open = null; loadChg(); loadChgReport(); }
+  if (v === 'reports') loadReports();
+  if (v === 'activity') loadActivity();
 }
 /* ---- who is online: drivers ping every minute while the app is open; admin lists them ---- */
 const ONLINE_MS = 90000;
@@ -2340,7 +2367,7 @@ async function loadDrivers() {
     $('#cnt-online').hidden = !n; $('#cnt-online').textContent = n;
     $('#drvSummary').textContent = n + ' online · ' + (rows.length - n) + ' offline';
     $('#drvMsg').hidden = true; window.__kmDrivers = rows.filter(r => r.track_km); window.__outDrivers = rows.filter(r => r.outside); loadKmReport(); loadChgReport();
-    $('#drvList').innerHTML = rows.length ? rows.map(r => `<li class="drv ${on(r) ? 'on' : ''}"><span class="led"></span><div><div class="nm">${esc(r.display_name)}</div><div class="st">${on(r) ? '● Online now' : esc(agoText(r.last_seen))}</div></div><div class="tgw"><button class="tgl ${r.track_km ? 'on' : ''}" data-kmsw="${r.id}" data-on="${r.track_km ? 1 : 0}" type="button">Km ${r.track_km ? 'ON' : 'OFF'}</button><button class="tgl ${r.outside ? 'on' : ''}" data-flag="outside" data-drv="${r.id}" data-on="${r.outside ? 1 : 0}" type="button">Outside ${r.outside ? 'ON' : 'OFF'}</button><button class="tgl ${r.charges_access ? 'on' : ''}" data-flag="charges_access" data-drv="${r.id}" data-on="${r.charges_access ? 1 : 0}" type="button">Charges ${r.charges_access ? 'ON' : 'OFF'}</button><button class="tgl ${r.merchant ? 'on' : ''}" data-flag="merchant" data-drv="${r.id}" data-on="${r.merchant ? 1 : 0}" type="button">Merchandiser ${r.merchant ? 'ON' : 'OFF'}</button></div></li>`).join('')
+    $('#drvList').innerHTML = rows.length ? rows.map(r => `<li class="drv ${on(r) ? 'on' : ''}"><span class="led"></span><div><div class="nm">${esc(r.display_name)}</div><div class="st">${on(r) ? '● Online now' : esc(agoText(r.last_seen))}</div></div><div class="tgw"><button class="tgl ${r.track_km ? 'on' : ''}" data-kmsw="${r.id}" data-on="${r.track_km ? 1 : 0}" type="button">Km ${r.track_km ? 'ON' : 'OFF'}</button><button class="tgl ${r.outside ? 'on' : ''}" data-flag="outside" data-drv="${r.id}" data-on="${r.outside ? 1 : 0}" type="button">Outside ${r.outside ? 'ON' : 'OFF'}</button><button class="tgl ${r.charges_access ? 'on' : ''}" data-flag="charges_access" data-drv="${r.id}" data-on="${r.charges_access ? 1 : 0}" type="button">Charges ${r.charges_access ? 'ON' : 'OFF'}</button><button class="tgl ${r.merchant ? 'on' : ''}" data-flag="merchant" data-drv="${r.id}" data-on="${r.merchant ? 1 : 0}" type="button">Merchandiser ${r.merchant ? 'ON' : 'OFF'}</button><button class="tgl" data-resetpw="${r.id}" data-nm="${esc(r.display_name)}" type="button">🔑 Reset password</button></div></li>`).join('')
       : '<li class="empty">No drivers yet.</li>';
   } catch (e) { $('#drvMsg').hidden = false; $('#drvMsg').textContent = 'Could not load drivers. Check the one-time Supabase step (last_seen) was run.'; }
 }
@@ -2450,7 +2477,7 @@ const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? 'returned
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
   returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone',
-  temp: i => 'Temperature: ' + (i || ''), reassigned: i => 'Sent out again: ' + (i || ''), to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
+  temp: i => 'Temperature: ' + (i || ''), moved: () => 'Moved to today', reassigned: i => 'Sent out again: ' + (i || ''), to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
 const evTime = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'), hm = p(d.getHours()) + ':' + p(d.getMinutes()); return dateKey(d) === dateKey() ? hm : d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + hm; };
 function stackBar(list) {
   const n = list.length || 1, c = f => list.filter(f).length;
@@ -3167,6 +3194,7 @@ document.addEventListener('click', async e => {
     else if (t.id === 'chgCsv') chgCsv();
     else if (t.id === 'chgPdf') await withBusy('Building statement…', () => chgStatement(false));
     else if (t.id === 'chgPdfSo') await withBusy('Building statement with SO numbers…', () => chgStatement(true));
+    else if (t.id === 'chgShare') await withBusy('Building statement…', () => chgStatement(true, true));
     else if (t.id === 'btnChgRef') { Chg.open = null; await loadChg(); await loadChgReport(); toast('Refreshed'); }
     else if (t.id === 'btnKmRef') { await loadKmReport(); toast('Refreshed'); }
     else if (t.id === 'btnOrdRef') { await loadOrders(); toast('Refreshed'); }
@@ -3211,7 +3239,7 @@ async function refreshDriver() {
 }
 
 /* ---- printable statement (PDF): summary per vehicle/driver + day-by-day details ---- */
-async function chgStatement(withSo) {
+async function chgStatement(withSo, share) {
   const rows = ChgA.rows.slice().sort((a, b) => String(a.name).localeCompare(String(b.name)) || String(a.day).localeCompare(String(b.day)));
   if (!rows.length) { toast('No charges in this period', true); return; }
   const DAYO = new Map(); let ATT = {past: [], counts: {}};
@@ -3280,7 +3308,8 @@ async function chgStatement(withSo) {
   });
   const n = doc.getPageCount(); doc.getPages().forEach((pg, i) => { page = pg; text('Page ' + (i + 1) + ' of ' + n, W / 2 + 20, 22, {size: 8, color: grey, right: true}); });
   const bytes = await doc.save();
-  downloadBlob(new Blob([bytes], {type: 'application/pdf'}), 'Outside_charges_statement_' + from + '_to_' + to + (withSo ? '_with_SO' : '') + '.pdf');
+  const fn = 'Outside_charges_statement_' + from + '_to_' + to + (withSo ? '_with_SO' : '') + '.pdf', pb = new Blob([bytes], {type: 'application/pdf'});
+  if (share) shareSheet(pb, fn); else downloadBlob(pb, fn);
 }
 /* =============== Today dashboard, missing PODs, storage / backup / cleanup =============== */
 const Dash = {d: null, st: null, days: 30, open: new Set(), det: {}};
@@ -3289,10 +3318,17 @@ const agoTxt = ms => { const d = Math.floor(ms / 864e5); return d <= 0 ? 'today'
 async function loadDash() {
   if (!session || session.role !== 'admin' || session.demo) return;
   try { Dash.d = await chgRpc('dash_today', {}); } catch (e) { toast(netMsg(e), true); }
-  await dashMerch();
+  await dashMerch(); await dashPend();
   try { Dash.bk = await chgRpc('backup_info', {}); } catch (e) {}
   try { Dash.st = await chgRpc('storage_usage', {p_days: Dash.days}); } catch (e) {}
   renderDash();
+}
+async function dashPend() {
+  try {
+    const today = dateKey(), res = await api('/rest/v1/assignments?select=id,so_no,customer,driver_name,driver_id,handed_by_id,return_from,status,work_date&work_date=lt.' + today + '&status=in.(unassigned,assigned,out,pod_pending)&order=work_date.asc&limit=300');
+    const rows = res.ok ? await res.json() : [];
+    Dash.pend = rows.filter(r => r.work_date < today && ['unassigned', 'assigned', 'out', 'pod_pending'].includes(r.status) && !(r.handed_by_id && r.driver_id !== r.handed_by_id && !r.return_from));
+  } catch (e) { Dash.pend = Dash.pend || []; }
 }
 async function dashMerch() {
   try {
@@ -3315,6 +3351,8 @@ function renderDash() {
   const lateM = {}; (Dash.mo || []).filter(r => mAge(r) >= 2).forEach(r => { lateM[r.driver_name] = (lateM[r.driver_name] || 0) + 1; });
   Object.keys(lateM).forEach(nm => act.push(['mlate:' + nm, lateM[nm] + ' order' + (lateM[nm] > 1 ? 's' : '') + ' with ' + nm + ' for 2+ days']));
   { const bm = bkMs(), bd2 = bm ? Math.floor((Date.now() - bm) / 864e5) : null; if (bd2 === null || bd2 >= 7) act.push(['backup', bd2 === null ? 'No backup made yet' : 'Backup is ' + bd2 + ' days old']); }
+  { const s0 = Dash.st, sp0 = s0 ? Math.round(s0.storage_bytes / 1e9 * 100) : 0; if (sp0 >= 70) act.push(['storage', '💾 Storage ' + Math.min(sp0, 100) + '% full · cleanup needed']); }
+  if ((Dash.pend || []).length) act.push(['pending', '📅 ' + Dash.pend.length + ' order' + (Dash.pend.length > 1 ? 's' : '') + ' pending from earlier days']);
   if (n('returned')) act.push(['returned', n('returned') + ' returned, not at hub']);
   if (n('unassigned')) act.push(['unassigned', n('unassigned') + ' order' + (n('unassigned') > 1 ? 's' : '') + ' not given to a driver']);
   if (d.not_assigned) act.push(['unmatched', d.not_assigned + ' uploaded POD' + (d.not_assigned > 1 ? 's' : '') + ' not matched to an invoice']);
@@ -3421,7 +3459,7 @@ autoUI();
 
 /* ---- admin bottom bar: More sheet ---- */
 function navSync(v) {
-  const more = ['invoices', 'km', 'charges'].includes(v), b = $('#navMore'), sh = $('#moreSheet');
+  const more = ['invoices', 'km', 'charges', 'reports', 'activity'].includes(v), b = $('#navMore'), sh = $('#moreSheet');
   if (b) { b.classList.toggle('on', more); b.setAttribute('aria-expanded', 'false'); } if (sh) sh.hidden = true;
 }
 document.addEventListener('click', e => {
@@ -3437,6 +3475,12 @@ function nBody(k, d) {
   const row = (a, b, c, pill) => `<div class="nd"><div><b>${esc(a)}</b> <span class="m">${esc(b || '')}</span><div class="m">${c}</div></div>${pill ? `<span class="pill warn">${esc(pill)}</span>` : ''}</div>`;
   let list = '', go = '', lbl = '';
   if (k === 'backup') return '<div class="m" style="padding:8px 0">A backup keeps a copy of all orders, km, charges and the PODs list on your phone, in case anything is lost. Takes a few seconds.</div><button type="button" class="nopen" id="btnBackup2" style="text-align:center;background:#b3261e;color:#fff;border-radius:12px;padding:12px">⬇ Download backup now</button>';
+  if (k === 'storage') { const s = Dash.st, sp = s ? Math.min(100, Math.round(s.storage_bytes / 1e9 * 100)) : 0; return `<div class="m" style="padding:8px 0">${s ? fmtSize(s.storage_bytes) : '?'} of 1 GB used. Download a backup ZIP and clean old invoices or PODs before it fills.</div><div class="meter"><i class="bad" style="width:${Math.max(sp, 2)}%"></i></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" class="btn sm primary" data-cleaninv="1">Clean old invoices</button><button type="button" class="btn sm" id="btnBackup2">Backup ZIP</button></div>`; }
+  if (k === 'pending') {
+    const rs = Dash.pend || [], ag = r => { const d = Math.floor((Date.now() - new Date(r.work_date + 'T00:00:00')) / 864e5); return d <= 1 ? '1 day' : d + ' days'; }, mv = rs.filter(r => ['assigned', 'unassigned'].includes(r.status)).length;
+    const lab = {unassigned: 'Unassigned', assigned: 'Assigned', out: 'Out', pod_pending: 'POD pending'};
+    return rs.map(r => `<div class="nd"><div><b>${esc(r.so_no)}</b> <span class="m">${esc(r.customer || '')}</span><div class="m"><span class="nmc">${esc(r.driver_name || 'no driver')}</span> · ${lab[r.status]}</div></div><span class="pill warn">${ag(r)}</span></div>`).join('') + (mv ? `<button type="button" class="nopen" data-movetoday="1">Move ${mv} assigned/unassigned to today ›</button>` : '') + '<div class="m" style="margin-top:6px">Out / POD pending orders are still with the driver: ask them to finish.</div>';
+  }
   if (k.startsWith('m:') || k.startsWith('mlate:')) {
     const nm = k.slice(k.indexOf(':') + 1), late = k.startsWith('mlate:');
     const rs = (Dash.mo || []).filter(r => r.driver_name === nm && (!late || mAge(r) >= 2));
@@ -3557,6 +3601,7 @@ async function invRefresh() {
 function invBanner() {
   let b = $('#invLegacy');
   if (!b) { b = document.createElement('div'); b.id = 'invLegacy'; b.className = 'banner'; const l = $('#list'); l.parentNode.insertBefore(b, l); }
+  let cb = $('#invCleanBtn'); if (!cb) { cb = document.createElement('button'); cb.id = 'invCleanBtn'; cb.className = 'btn sm'; cb.type = 'button'; cb.textContent = '🧹 Clean old closed invoices'; cb.style.margin = '0 0 10px'; b.parentNode.insertBefore(cb, b.nextSibling); } cb.hidden = !INV.on;
   const n = INV.legacy.length;
   if (!INV.on && INV.err) { b.hidden = false; b.innerHTML = '⚠ Server invoices not available: <b>' + esc(INV.err) + '</b>. Showing only invoices saved on this phone.'; return; }
   b.hidden = !n || !INV.on;
@@ -3582,6 +3627,132 @@ async function invStart() {
   catch (e) { INV.on = false; state.records = INV.legacy; INV.err = netMsg(e); toast(INV.err, true); }
   state.selected.clear(); renderList(); invBanner();
 }
+/* =====================================================================
+   More: Reports (returns + drivers), Activity log, share sheet, invoice cleanup, password reset
+   ===================================================================== */
+const mdlEl = (() => { const d = document.createElement('div'); d.id = 'mdl'; d.className = 'tsheet'; d.hidden = true; d.innerHTML = '<div class="tbox"><div class="cap"></div><h3 id="mdlT"></h3><div id="mdlB"></div><div class="trow" id="mdlF"></div></div>'; document.body.appendChild(d); return d; })();
+const MDL = {ok: null};
+function mdl(title, body, okText, ok, cancelText) {
+  $('#mdlT').textContent = title; $('#mdlB').innerHTML = body; MDL.ok = ok || null;
+  $('#mdlF').innerHTML = `<button class="btn" id="mdlX" type="button">${esc(cancelText || (ok ? 'Cancel' : 'Close'))}</button>` + (ok ? `<button class="btn primary" id="mdlOk" type="button">${esc(okText || 'OK')}</button>` : '');
+  mdlEl.hidden = false;
+}
+const mdlClose = () => { mdlEl.hidden = true; MDL.ok = null; };
+
+/* ---------- share (WhatsApp etc.) ---------- */
+const ShareQ = {blob: null, name: ''};
+function shareSheet(blob, name) {
+  ShareQ.blob = blob; ShareQ.name = name;
+  mdl('Ready to share', `<div class="m" style="margin-bottom:10px"><b>${esc(name)}</b> · ${fmtSize(blob.size)}</div><button class="btn primary main" id="shareGo" type="button">↗ Share (WhatsApp…)</button><button class="btn main" id="shareDl" type="button" style="margin-top:8px">⬇ Download instead</button>`);
+}
+async function shareNow() {
+  const f = new File([ShareQ.blob], ShareQ.name, {type: ShareQ.blob.type});
+  if (navigator.canShare && navigator.canShare({files: [f]})) {
+    try { await navigator.share({files: [f], title: ShareQ.name}); mdlClose(); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  downloadBlob(ShareQ.blob, ShareQ.name); mdlClose(); toast('Sharing is not available here, file downloaded');
+}
+
+/* ---------- Reports ---------- */
+const Rep = {tab: 'returns', ret: null, drv: null, open: new Set()};
+const repHm = v => { if (!v) return '–'; const d = new Date(v), p = n => String(n).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()); };
+const repDur = m => m >= 60 ? Math.floor(m / 60) + 'h ' + String(Math.round(m % 60)).padStart(2, '0') + 'm' : Math.round(m) + ' min';
+function repInit() { if (!$('#repFrom').value) { const t = new Date(); $('#repFrom').value = dateKey(new Date(t.getTime() - 29 * 864e5)); $('#repTo').value = dateKey(t); } }
+function repErr(e) { return /could not find|function|404|PGRST/i.test(e && e.message || '') ? 'Reports are not ready yet: run more.sql in Supabase.' : netMsg(e); }
+async function loadReports() {
+  repInit(); const from = $('#repFrom').value, to = $('#repTo').value; if (!from || !to) return;
+  document.querySelectorAll('[data-reptab]').forEach(b => b.classList.toggle('primary', b.dataset.reptab === Rep.tab));
+  $('#repBody').innerHTML = '<div class="empty">Loading…</div>';
+  try { const [r, d] = await Promise.all([chgRpc('report_returns', {p_from: from, p_to: to}), chgRpc('report_drivers', {p_from: from, p_to: to})]); Rep.ret = r; Rep.drv = d || []; renderReports(); }
+  catch (e) { $('#repBody').innerHTML = '<div class="empty">' + esc(repErr(e)) + '</div>'; }
+}
+function repBars(map, max) { return map.map(([k, n]) => `<div class="rbar"><div class="rl"><span>${esc(k)}</span><b>${n}</b></div><div class="rt"><i style="width:${Math.max(3, Math.round(n / max * 100))}%"></i></div></div>`).join(''); }
+function renderReports() {
+  const el = $('#repBody'); if (!el) return;
+  if (Rep.tab === 'returns') {
+    const rows = (Rep.ret && Rep.ret.rows) || [], total = Number(Rep.ret && Rep.ret.total || 0);
+    if (!rows.length) { el.innerHTML = '<div class="empty">No returns in this period 🎉</div>'; return; }
+    const cnt = (f) => { const m = {}; rows.forEach(r => { const k = f(r); m[k] = (m[k] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); };
+    const reasons = cnt(r => ((r.note || '').split(' - ')[0].trim()) || 'No reason noted'), custs = cnt(r => r.customer || '(no customer)').slice(0, 8);
+    const drv = (Rep.drv || []).filter(d => d.returned > 0).map(d => [d.name, d.returned, d.orders]).sort((a, b) => b[1] / b[2] - a[1] / a[2]);
+    el.innerHTML = `<h3 style="margin:0 0 2px">Returns</h3><div class="m">${rows.length} return${rows.length > 1 ? 's' : ''} of ${total} orders (${total ? (rows.length / total * 100).toFixed(1) : 0}%)</div>
+      <h4 class="rh">By reason</h4>${repBars(reasons, reasons[0][1])}
+      <h4 class="rh">By customer</h4>${custs.map(([k, n]) => `<div class="rrow"><span>${esc(k)}</span><b>${n}</b></div>`).join('')}
+      <h4 class="rh">By driver</h4>${drv.map(([k, n, o]) => `<div class="rrow"><span>${esc(k)} <span class="m">${n} of ${o}</span></span><b>${Math.round(n / o * 100)}%</b></div>`).join('')}`;
+  } else {
+    const d = Rep.drv || [];
+    if (!d.length) { el.innerHTML = '<div class="empty">No deliveries in this period.</div>'; return; }
+    el.innerHTML = `<table class="rtab"><tr><th>Driver</th><th>Deliv.</th><th>Returns</th><th>Avg time</th></tr>` + d.map(x => {
+      const pct = x.orders ? Math.round(x.returned / x.orders * 100) : 0, op = Rep.open.has(x.driver_id);
+      const days = op ? `<tr class="rdet"><td colspan="4"><table class="rtab sm"><tr><th>Day</th><th>First out</th><th>Last deliv.</th><th>Longest gap</th></tr>` + (x.days || []).map(y => {
+        const ts = (y.times || []).map(t => new Date(t).getTime()).sort((a, b) => a - b); let gap = 0; for (let i = 1; i < ts.length; i++) gap = Math.max(gap, (ts[i] - ts[i - 1]) / 6e4);
+        return `<tr><td>${esc(String(y.day).slice(5))}</td><td>${repHm(y.first_out)}</td><td>${repHm(y.last_deliv)}</td><td>${gap ? repDur(gap) : '–'}</td></tr>`; }).join('') + '</table></td></tr>' : '';
+      return `<tr class="rdrv" data-repdrv="${x.driver_id}"><td><b class="nmc">${esc(x.name)}</b> ${op ? '⌃' : '⌄'}</td><td>${x.delivered}</td><td class="${pct >= 15 ? 'bad' : ''}">${pct}%</td><td>${x.avg_min ? x.avg_min + ' min' : '–'}</td></tr>` + days; }).join('') + '</table><div class="m" style="margin-top:8px">Avg time = from "Out for delivery" to "Delivered" per order. Tap a driver for the day-wise first/last delivery.</div>';
+  }
+}
+
+/* ---------- Activity log ---------- */
+async function loadActivity() {
+  const el = $('#actBody'); el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await api('/rest/v1/audit_log?select=at,actor,action,target,detail&order=at.desc&limit=200');
+    if (!res.ok) throw new Error(res.status === 404 ? 'run more.sql' : 'HTTP ' + res.status);
+    const rows = await res.json();
+    el.innerHTML = rows.length ? rows.map(r => `<div class="arow"><div><b>${esc(r.action)}</b> · ${esc(r.target || '')}<div class="m">${esc(r.detail || '')}</div><div class="m">by ${esc(r.actor || 'system')}</div></div><span class="m">${evTime(r.at)}</span></div>`).join('') : '<div class="empty">Nothing deleted yet.</div>';
+  } catch (e) { el.innerHTML = '<div class="empty">' + esc(/more\.sql/.test(e.message) ? 'Activity log is not ready yet: run more.sql in Supabase.' : netMsg(e)) + '</div>'; }
+}
+
+/* ---------- Invoice cleanup (older closed invoices -> ZIP backup -> delete) ---------- */
+function invCleanList(days) { const lim = Date.now() - days * 864e5; return state.records.filter(r => r.status === 'closed' && r.closedAt && r.closedAt < lim); }
+function invCleanOpen() {
+  if (!INV.on) { toast('Invoices are not on the server yet', true); return; }
+  const body = d => { const l = invCleanList(d), docs = l.reduce((s, r) => s + r.docs.length, 0); return `<div class="m" style="margin-bottom:8px">Closed invoices older than</div><select id="icDays" class="kmin">${[60, 90, 180].map(x => `<option value="${x}" ${x === d ? 'selected' : ''}>${x} days</option>`).join('')}</select><div class="m" style="margin:10px 0"><b>${l.length} invoice${l.length === 1 ? '' : 's'}</b> · ${docs} photos · frees about ${fmtSize(docs * 170 * 1024)}</div><div class="m">Step 1: a ZIP backup downloads. Step 2: you confirm, then they are deleted from the server.</div>`; };
+  let d = 90; mdl('Clean old closed invoices', body(d), 'Backup ZIP & delete', async () => {
+    const list = invCleanList(d); if (!list.length) { toast('Nothing to clean'); return; }
+    mdlClose(); await downloadZip(list);
+    if (!confirm('ZIP downloaded with ' + list.length + ' invoice(s). Check that it opened fine.\n\nDelete them from the server now? This frees space and cannot be undone.')) return;
+    let n = 0; await withBusy('Deleting…', async setP => { for (const r of list) { try { await DB.del(r.id); state.records = state.records.filter(x => x.id !== r.id); state.selected.delete(r.id); n++; } catch (e) {} setP(n / list.length); } });
+    renderList(); toast(n + ' invoice' + (n === 1 ? '' : 's') + ' deleted');
+  });
+  $('#icDays').addEventListener('change', e => { d = Number(e.target.value); $('#mdlB').innerHTML = body(d); $('#icDays').addEventListener('change', ev => { d = Number(ev.target.value); $('#mdlB').innerHTML = body(d); }); });
+}
+
+/* ---------- Earlier days pending: move assigned orders to today ---------- */
+async function moveToday() {
+  const ids = (Dash.pend || []).filter(r => ['assigned', 'unassigned'].includes(r.status)).map(r => r.id); if (!ids.length) return;
+  try { const n = await chgRpc('admin_move_today', {p_ids: ids}); toast(n + ' order' + (n === 1 ? '' : 's') + ' moved to today'); await loadDash(); } catch (e) { toast(netMsg(e), true); }
+}
+
+/* ---------- Reset a driver's password ---------- */
+function genPw(nm) { const a = new Uint32Array(1); crypto.getRandomValues(a); const p = (String(nm || 'drv').toLowerCase().replace(/[^a-z]/g, '').slice(0, 3) || 'drv'); return p + '-' + String(1000 + a[0] % 9000); }
+function resetPw(id, nm) {
+  const pw = genPw(nm);
+  mdl('Reset password', `<div class="m">Set a new password for <b>${esc(nm)}</b>? The old one stops working and ${esc(nm)} will have to log in again.</div><div class="pwbox">${esc(pw)}</div><div class="m">Write it down or send it to the driver after you confirm.</div>`, 'Reset now', async () => {
+    try { await chgRpc('admin_reset_password', {p_driver: id, p_new: pw}); }
+    catch (e) { toast(/function|404|PGRST|could not find/i.test(e.message || '') ? 'Run more.sql in Supabase first' : netMsg(e), true); return; }
+    mdl('Password changed ✓', `<div class="m">New password for <b>${esc(nm)}</b>:</div><div class="pwbox">${esc(pw)}</div><button class="btn main" id="pwCopy" type="button" data-pw="${esc(pw)}">Copy</button>`);
+  });
+}
+
+document.addEventListener('click', async e => {
+  const t = e.target, c = s => t.closest && t.closest(s);
+  if (t.id === 'mdlX' || t === mdlEl) { mdlClose(); return; }
+  if (t.id === 'mdlOk' && MDL.ok) { const f = MDL.ok; MDL.ok = null; mdlEl.hidden = true; try { await f(); } catch (x) { toast(netMsg(x), true); } return; }
+  if (t.id === 'shareGo') { shareNow(); return; }
+  if (t.id === 'shareDl') { downloadBlob(ShareQ.blob, ShareQ.name); mdlClose(); return; }
+  if (t.id === 'pwCopy') { try { await navigator.clipboard.writeText(t.dataset.pw); toast('Copied'); } catch (x) { toast('Copy not allowed, write it down', true); } return; }
+  let b;
+  if ((b = c('[data-reptab]'))) { Rep.tab = b.dataset.reptab; loadReports(); return; }
+  if ((b = c('[data-repq]'))) { const now = new Date(), q = b.dataset.repq; $('#repTo').value = dateKey(now); $('#repFrom').value = q === 'm' ? dateKey(new Date(now.getFullYear(), now.getMonth(), 1)) : dateKey(new Date(now.getTime() - (Number(q) - 1) * 864e5)); loadReports(); return; }
+  if ((b = c('[data-repdrv]'))) { const id = b.dataset.repdrv; Rep.open.has(id) ? Rep.open.delete(id) : Rep.open.add(id); renderReports(); return; }
+  if (t.id === 'btnRepRef') { loadReports(); return; }
+  if (t.id === 'btnActRef') { loadActivity(); return; }
+  if (c('[data-movetoday]')) { moveToday(); return; }
+  if (c('[data-cleaninv]')) { setView('invoices'); setTimeout(invCleanOpen, 150); return; }
+  if (t.id === 'invCleanBtn') { invCleanOpen(); return; }
+  if ((b = c('[data-resetpw]'))) { resetPw(b.dataset.resetpw, b.dataset.nm); return; }
+});
+document.addEventListener('change', e => { if (e.target.id === 'repFrom' || e.target.id === 'repTo') loadReports(); });
 /* =====================================================================
    Boot
    ===================================================================== */
