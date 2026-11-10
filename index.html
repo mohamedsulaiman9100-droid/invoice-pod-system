@@ -3195,7 +3195,10 @@ async function refreshDriver() {
 async function chgStatement(withSo) {
   const rows = ChgA.rows.slice().sort((a, b) => String(a.name).localeCompare(String(b.name)) || String(a.day).localeCompare(String(b.day)));
   if (!rows.length) { toast('No charges in this period', true); return; }
-  const DAYO = new Map();
+  const DAYO = new Map(); let ATT = {past: [], counts: {}};
+  try { const a = await chgRpc('charges_attempts', {p_from: $('#chgFrom').value, p_to: $('#chgTo').value}); if (a && a.past) ATT = a; } catch (e) {}
+  const pastBy = new Map(); ATT.past.forEach(x => { const k = x.day + '|' + x.driver_id; (pastBy.get(k) || pastBy.set(k, []).get(k)).push(x); });
+  rows.forEach(r => { r.returned = Number(r.returned || 0) + (pastBy.get(r.day + '|' + r.driver_id) || []).length; });
   if (withSo) {      // one lookup per day: the orders (SO, customer, status, amount) of every vehicle that day
     const days = [...new Set(rows.map(r => r.day))]; let i = 0;
     const work = async () => { while (i < days.length) { const d = days[i++]; const list = await chgRpc('charges_day', {p_date: d}); (list || []).forEach(x => DAYO.set(d + '|' + x.driver_id, x.orders || [])); } };
@@ -3216,14 +3219,17 @@ async function chgStatement(withSo) {
   const soBlock = (nm, mine) => {
     const cont = () => { newPage(); text(nm + ' (continued)', M, y, {bold: true, size: 11}); y -= 16; };
     mine.forEach(r => {
-      const os = (DAYO.get(r.day + '|' + r.driver_id) || []).filter(o => DELIVERED.includes(o.status) || o.status === 'returned');
+      const os = (DAYO.get(r.day + '|' + r.driver_id) || []).filter(o => DELIVERED.includes(o.status) || o.status === 'returned').concat((pastBy.get(r.day + '|' + r.driver_id) || []).map(x => ({so_no: x.so_no, customer: x.customer, status: 'returned', past: true}))).sort((a, b) => String(a.so_no).localeCompare(String(b.so_no)));
       if (y < 110) cont();
       page.drawRectangle({x: M, y: y - 4, width: W - 2 * M, height: 16, color: rgb(0.93, 0.95, 0.97)});
       let dl = r.day; try { dl = new Date(r.day + 'T00:00:00').toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'}); } catch (e) {}
       text(dl + (r.vehicle ? '  ·  ' + r.vehicle : ''), M + 4, y, {bold: true, size: 9}); y -= 17;
       os.forEach(o => { if (y < 60) cont();
         const d = DELIVERED.includes(o.status);
-        text(o.so_no || '', M + 10, y, {size: 8.5}); text(cut(o.customer, 44), M + 88, y, {size: 8.5}); text(d ? 'Delivered' : 'Returned', M + 360, y, {size: 8.5, bold: true, color: d ? green : red}); text(d ? money(o.amount) : '-', M + 515, y, {size: 8.5, right: true});
+        const n = (ATT.counts[o.so_no] || 0) + 1, tag = !o.past && n > 1 ? (n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th') + ' attempt' : '';
+        text(o.so_no || '', M + 10, y, {size: 8.5});
+        if (tag) { const tw = F.widthOfTextAtSize(tag, 7) + 8, tx = M + 10 + F.widthOfTextAtSize(safe(o.so_no || ''), 8.5) + 6; page.drawRectangle({x: tx, y: y - 2.5, width: tw, height: 10, color: rgb(1, 0.95, 0.77)}); text(tag, tx + 4, y, {size: 7}); }
+        text(cut(o.customer, 44), M + 128, y, {size: 8.5}); text(d ? 'Delivered' : 'Returned', M + 360, y, {size: 8.5, bold: true, color: d ? green : red}); text(d ? money(o.amount) : '-', M + 515, y, {size: 8.5, right: true});
         page.drawLine({start: {x: M, y: y - 4}, end: {x: W - M, y: y - 4}, thickness: .3, color: line}); y -= 13; });
       if (y < 60) cont();
       text('Labour ' + money(r.labour) + '    Return charge ' + money(r.return_charge), M + 10, y, {size: 8.5, color: grey}); text('Day total', M + 450, y, {bold: true, size: 9, right: true}); text(money(chgRowTotal(r)), M + 515, y, {bold: true, size: 9, right: true}); y -= 20;
