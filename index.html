@@ -1487,6 +1487,7 @@ function rowHtml(r) {
       <div class="meta">Invoice ${countDocs(r, 'invoice')} · LPO/POD ${countDocs(r, 'pod')} · ${closed ? 'Closed ' + fmtDate(r.closedAt) : 'Updated ' + fmtDate(r.updatedAt)}</div></div>
     <div class="acts">
       <button class="btn sm" data-act="edit" type="button">Open</button>
+      <button class="btn sm" data-act="qphoto" type="button">📷 Add photo</button>
       <button class="btn sm" data-act="pdf" type="button" ${r.docs.length ? '' : 'disabled'}>PDF</button>
       ${closed ? '<button class="btn sm" data-act="reopen" type="button">Reopen</button>' : '<button class="btn sm primary" data-act="close" type="button">Close</button>'}
       <button class="btn sm danger" data-act="del" type="button">Delete</button>
@@ -1759,6 +1760,7 @@ document.addEventListener('click', async e => {
     if (li) {
       const id = li.dataset.id, rec = state.records.find(r => r.id === id);
       if (act === 'edit') openEditor(rec);
+      else if (act === 'qphoto') { openEditor(rec); pendingKind = 'pod'; $('#fileCam').click(); }
       else if (act === 'close') await setStatus(id, 'closed');
       else if (act === 'reopen') await setStatus(id, 'open');
       else if (act === 'del') await deleteRecord(id);
