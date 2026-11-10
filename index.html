@@ -524,6 +524,8 @@ button.mrow{appearance:none;width:100%;text-align:left;cursor:pointer;font:inher
 .att-h{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#5c6878;margin:12px 0 6px}
 #ordList li.hint{display:block;background:#fff0cc;color:#6b4c00;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:8px;grid-column:1/-1}
 body.adm main{padding-bottom:160px}
+
+.tempf{display:flex;align-items:center;gap:10px}.tempf input{flex:1;font-size:26px!important;font-weight:700;text-align:center}.tempf span{font-size:18px;color:var(--muted,#8da0b4);font-weight:700}
 </style>
 </head>
 <body class="booting">
@@ -2448,7 +2450,7 @@ const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? 'returned
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
   returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone',
-  reassigned: i => 'Sent out again: ' + (i || ''), to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
+  temp: i => 'Temperature: ' + (i || ''), reassigned: i => 'Sent out again: ' + (i || ''), to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
 const evTime = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'), hm = p(d.getHours()) + ':' + p(d.getMinutes()); return dateKey(d) === dateKey() ? hm : d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + hm; };
 function stackBar(list) {
   const n = list.length || 1, c = f => list.filter(f).length;
@@ -2460,7 +2462,7 @@ async function rpcRaw(name, args) {
   if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { const j = await res.json(); if (j.message) m = j.message; } catch (e) {} throw new Error(m); }
 }
 /* ---- driver actions keep working with no internet: saved on the phone, sent later (in order) ---- */
-const AQ_NAMES = new Set(['driver_pick', 'driver_mark', 'driver_unreceive']);
+const AQ_NAMES = new Set(['driver_pick', 'driver_mark', 'driver_unreceive', 'driver_set_temp']);
 const aqKey = () => 'pod.aq.' + (session && session.uid);
 const aqGet = () => { try { return JSON.parse(LS.get(aqKey()) || '[]'); } catch (e) { return []; } };
 const aqSet = a => LS.set(aqKey(), JSON.stringify(a));
@@ -2551,7 +2553,12 @@ function renderTrip() {
 const NP_REASONS = ['Not in schedule', 'Area not covered', 'Stock not ready', 'Other'], RET_REASONS = ['Customer closed', 'Customer refused', 'Wrong / damaged item', 'Could not reach customer', 'Other'];
 function openTripSheet(kind, row) {
   Trip.sheet = {kind, row, reason: kind === 'np' ? NP_REASONS[0] : RET_REASONS[0]};
-  $('#tsOk').hidden = false;
+  $('#tsOk').hidden = false; $('#tsOk').textContent = kind === 'temp' ? 'Delivered ✓' : 'Save';
+  if (kind === 'temp') {
+    $('#tsTitle').textContent = 'Shipment temperature';
+    $('#tsBody').innerHTML = '<div class="tempf"><input id="tsText" inputmode="decimal" placeholder="e.g. 20" autocomplete="off"><span>°C</span></div><button class="linkbtn" data-skiptemp type="button">No temperature for this order</button>';
+    $('#tripSheet').hidden = false; setTimeout(() => $('#tsText').focus(), 50); return;
+  }
   if (kind === 'hand' || kind === 'rethand') return openPickSheet(kind, row);
   $('#tsTitle').textContent = kind === 'hand' ? 'Handed to merchandiser' : kind === 'np' ? 'Why not picked?' : 'Return to hub';
   const reasons = kind === 'np' ? NP_REASONS : RET_REASONS;
@@ -2584,7 +2591,7 @@ document.addEventListener('click', async e => {
     if (act === 'upload') await afterDeliveredPrompt(row);
     else if (act === 'unrecv') { await rpc('driver_unreceive', {p_id: row.id}); toast('Sent back ✓'); await loadTrip(); }
     else if (act === 'pick') { await rpc('driver_pick', {p_id: row.id, p_ok: true, p_text: ''}); toast('Out for delivery ✓'); await loadTrip(); }
-    else if (act === 'deliv') { await rpc('driver_mark', {p_id: row.id, p_status: 'pod_pending', p_text: ''}); await loadTrip(); toast('Delivered. Now upload the POD'); await afterDeliveredPrompt(row); }
+    else if (act === 'deliv') openTripSheet('temp', row);
     else if (act === 'undo') { await rpc('driver_mark', {p_id: row.id, p_status: 'out', p_text: ''}); await loadTrip(); }
     else openTripSheet(act, row);
   } catch (x) { toast(netMsg(x), true); }
@@ -2593,11 +2600,23 @@ document.addEventListener('click', async e => {
   const pk = e.target.closest('[data-pick]');
   if (pk && Trip.sheet) { try { await rpc('driver_handover', {p_id: Trip.sheet.row.id, p_to: pk.dataset.pick}); $('#tripSheet').hidden = true; toast((Trip.sheet.kind === 'hand' ? 'Handed to ' : 'Return handed to ') + pk.dataset.name + ' ✓'); await loadTrip(); } catch (x) { toast(netMsg(x), true); } return; }
 });
+async function deliverWithTemp(row, val) {
+  await rpc('driver_mark', {p_id: row.id, p_status: 'pod_pending', p_text: ''});
+  if (val != null) await rpc('driver_set_temp', {p_id: row.id, p_temp: val});
+  $('#tripSheet').hidden = true; await loadTrip(); toast('Delivered' + (val != null ? ' · ' + val + ' °C' : '') + '. Now upload the POD'); await afterDeliveredPrompt(row);
+}
 document.addEventListener('click', async e => {
   if (e.target.id === 'tsCancel') { $('#tripSheet').hidden = true; return; }
+  if (e.target.closest && e.target.closest('[data-skiptemp]') && Trip.sheet && Trip.sheet.kind === 'temp') { try { await deliverWithTemp(Trip.sheet.row, null); } catch (x) { toast(netMsg(x), true); } return; }
   if (e.target.id !== 'tsOk' || !Trip.sheet) return;
   const {kind, row, reason} = Trip.sheet, t = ($('#tsText').value || '').trim();
   try {
+    if (kind === 'temp') {
+      const v = parseFloat(t.replace(',', '.'));
+      if (!t) { toast('Type the temperature, or tap "No temperature"', true); return; }
+      if (isNaN(v) || v < -30 || v > 60) { toast('Check the temperature value', true); return; }
+      await deliverWithTemp(row, Math.round(v * 10) / 10); return;
+    }
     if (kind === 'hand' || kind === 'handtxt') { if (!t) { toast('Enter the name of who took it', true); return; } await rpc('driver_mark', {p_id: row.id, p_status: 'handed_over', p_text: t}); }
     else if (kind === 'ret') await rpc('driver_mark', {p_id: row.id, p_status: 'returned', p_text: reason + (t ? ' - ' + t : '')});
     else await rpc('driver_pick', {p_id: row.id, p_ok: false, p_text: reason + (t ? ' - ' + t : '')});
@@ -2656,7 +2675,7 @@ async function delOrders(ids) {
 async function openOrderDetail(id) {
   const r = Ord.rows.find(x => x.id === id); if (!r) return;
   $('#ordSheet').hidden = false;
-  const facts = [r.driver_name && ((r.handed_by && !r.return_from ? 'With merchandiser: <b>' : r.return_from ? 'Return carried by: <b>' : 'Driver: <b>') + esc(r.driver_name) + '</b>'), r.handed_by && 'Handed over by: <b>' + esc(r.handed_by) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>'].filter(Boolean).join(' · ');
+  const facts = [r.driver_name && ((r.handed_by && !r.return_from ? 'With merchandiser: <b>' : r.return_from ? 'Return carried by: <b>' : 'Driver: <b>') + esc(r.driver_name) + '</b>'), r.handed_by && 'Handed over by: <b>' + esc(r.handed_by) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>', r.temp_c != null && 'Temperature: <b>' + esc(String(r.temp_c)) + ' °C</b>'].filter(Boolean).join(' · ');
   const act = (r.status === 'returned' && !r.hub_received_at ? `<button class="btn primary main" data-hubrec="${r.id}" type="button">Received at hub</button>` : '') + `<button class="btn danger main" data-odel="${r.id}" type="button">Delete this order</button>`;
   $('#ordDetail').innerHTML = `<div class="dtitle"><div><div class="m">${esc(r.so_no)}</div><h3>${esc(r.customer || r.so_no)}</h3></div>${kchip(r)}</div>${facts ? `<div class="m" style="margin:8px 0">${facts}</div>` : ''}${act}<h4 style="margin:16px 0 10px">History</h4><div class="steps" id="ordHist"><div class="m">Loading…</div></div>`;
   try {
@@ -2824,8 +2843,8 @@ function ordExport() {
   const dt = v => v ? new Date(v).toLocaleString('en-GB', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'}) : '';
   const st = r => isMerch(r) ? 'With merchandiser' : r.status === 'returned' ? (r.hub_received_at ? 'Returned · at hub' : 'Returned, not at hub') : (stOf(r) || {}).t || r.status;
   const pod = r => r.status === 'complete' ? 'Uploaded' : r.status === 'pod_pending' || isMerch(r) ? 'Missing' : r.status === 'handed_over' ? 'Handed over' : '';
-  const head = ['Date', 'SO number', 'Customer', 'Status', 'Driver', 'Vehicle', 'Handed by', 'Merchandiser', 'Days with merchandiser', 'Delivered', 'POD', 'Hub received'];
-  const lines = [head.map(csvCell).join(',')].concat(rows.map(r => [r.work_date, r.so_no, r.customer, st(r), isMerch(r) ? (r.handed_by || '') : (r.driver_name || ''), r.vehicle, isMerch(r) ? (r.handed_by || '') : '', isMerch(r) ? r.driver_name : '', isMerch(r) ? mAgeDays(r) : '', dt(r.delivered_at), pod(r), dt(r.hub_received_at)].map(csvCell).join(',')));
+  const head = ['Date', 'SO number', 'Customer', 'Status', 'Driver', 'Vehicle', 'Handed by', 'Merchandiser', 'Days with merchandiser', 'Delivered', 'Temp °C', 'POD', 'Hub received'];
+  const lines = [head.map(csvCell).join(',')].concat(rows.map(r => [r.work_date, r.so_no, r.customer, st(r), isMerch(r) ? (r.handed_by || '') : (r.driver_name || ''), r.vehicle, isMerch(r) ? (r.handed_by || '') : '', isMerch(r) ? r.driver_name : '', isMerch(r) ? mAgeDays(r) : '', dt(r.delivered_at), r.temp_c != null ? r.temp_c : '', pod(r), dt(r.hub_received_at)].map(csvCell).join(',')));
   const tag = 'Selected';
   downloadBlob(new Blob(['\ufeff' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'}), 'Orders_' + ($('#tripDate').value || dateKey()) + (tag ? '_' + tag : '') + '.csv');
   toast('Exported ' + rows.length + ' order' + (rows.length > 1 ? 's' : '') + ' ✓');
