@@ -1452,6 +1452,7 @@ async function downloadZip(records) {
     for (const r of records) {
       setMsg(`Adding ${r.no} (${++i}/${records.length})…`); setP((i - 1) / records.length);
       if (!r.docs.length) { skipped.push(r.no); continue; }
+      await invHydrate(r);
       const bytes = await buildCombinedPdf(r.no, r.docs);
       zip.file(r.no + '.pdf', bytes);
       const pages = (await PDFLib.PDFDocument.load(bytes)).getPageCount();
@@ -1509,7 +1510,7 @@ function renderList() {
 }
 async function persist(rec) {
   try { await DB.put(rec); }
-  catch (e) { toast('Could not save to browser storage (storage full?).', true); throw e; }
+  catch (e) { toast(typeof INV !== 'undefined' && INV.on ? netMsg(e) : 'Could not save to browser storage (storage full?).', true); throw e; }
   const i = state.records.findIndex(r => r.id === rec.id);
   if (i >= 0) state.records[i] = rec; else state.records.push(rec);
 }
@@ -1759,12 +1760,12 @@ document.addEventListener('click', async e => {
     const li = t.closest('li.rec');
     if (li) {
       const id = li.dataset.id, rec = state.records.find(r => r.id === id);
-      if (act === 'edit') openEditor(rec);
-      else if (act === 'qphoto') { openEditor(rec); pendingKind = 'pod'; $('#fileCam').click(); }
+      if (act === 'edit') { await invHydrate(rec); openEditor(rec); }
+      else if (act === 'qphoto') { await invHydrate(rec); openEditor(rec); pendingKind = 'pod'; $('#fileCam').click(); }
       else if (act === 'close') await setStatus(id, 'closed');
       else if (act === 'reopen') await setStatus(id, 'open');
       else if (act === 'del') await deleteRecord(id);
-      else if (act === 'pdf') await downloadCombined(rec.no, rec.docs);
+      else if (act === 'pdf') { await invHydrate(rec); await downloadCombined(rec.no, rec.docs); }
       return;
     }
     // editor actions
@@ -2297,7 +2298,7 @@ $('#viewer').addEventListener('click', e => { if (e.target.id === 'viewer' || e.
 
 let view = 'invoices';
 function setView(v) {
-  view = v; $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewToday').hidden = v !== 'today'; $('#viewCharges').hidden = v !== 'charges'; $('#btnNew').hidden = v !== 'invoices';
+  view = v; if (v === 'invoices' && typeof INV !== 'undefined' && INV.on) setTimeout(invRefresh, 0); $('#viewInvoices').hidden = v !== 'invoices'; $('#viewInbox').hidden = v !== 'inbox'; $('#viewDrivers').hidden = v !== 'drivers'; $('#viewOrders').hidden = v !== 'orders'; $('#viewKm').hidden = v !== 'km'; $('#viewToday').hidden = v !== 'today'; $('#viewCharges').hidden = v !== 'charges'; $('#btnNew').hidden = v !== 'invoices';
   document.querySelectorAll('.vtab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   LS.set('pod.view', v);
   if (typeof navSync === 'function') navSync(v);
@@ -2370,7 +2371,7 @@ function startApp() {
     $('#viewBar').hidden = false; $('#btnSignOut').hidden = false; document.body.classList.add('adm');
     $('#whoLine').textContent = session.demo ? 'DEMO · data stays on this phone only' : 'Admin';
     setView(['today', 'inbox', 'drivers', 'orders', 'km', 'charges'].includes(LS.get('pod.view')) ? LS.get('pod.view') : 'today');
-    loadInbox(); if (!session.demo) { loadDrivers(); loadTop(); }
+    loadInbox(); if (!session.demo) { loadDrivers(); loadTop(); invStart(); }
     setInterval(() => { if (!document.hidden && !session.demo) loadDrivers(); }, 30000);
     addEventListener('online', () => { if (view === 'inbox') loadInbox(); });
   }
@@ -3423,6 +3424,113 @@ document.addEventListener('click', e => {
   box.hidden = open; b.setAttribute('aria-expanded', String(!open)); b.querySelector('b').textContent = open ? 'Details ⌄' : 'Hide ⌃';
   if (!open) { box.innerHTML = nBody(k, Dash.d); delete Dash.det[k]; box.innerHTML = nBody(k, Dash.d); nLoad(k); }
 });
+/* =====================================================================
+   Invoices on the server (admin): same list on phone + computer, photos compressed
+   ===================================================================== */
+const INV = {on: false, legacy: []};
+const _dbAll = DB.all.bind(DB), _dbPut = DB.put.bind(DB), _dbDel = DB.del.bind(DB);
+DB.all = () => INV.on ? invList() : _dbAll();
+DB.put = rec => INV.on ? invPut(rec) : _dbPut(rec);
+DB.del = id => INV.on ? invDel(id) : _dbDel(id);
+
+const invMeta = d => ({id: d.id, kind: d.kind, name: d.name || 'photo.jpg', type: 'image', path: d.path, w: d.w || null, h: d.h || null, pages: 1, added: d.added || Date.now()});
+const invMs = s => s ? Date.parse(s) : null;
+async function invList() {
+  const res = await api('/rest/v1/invoices?select=*&order=updated_at.desc&limit=5000');
+  if (!res.ok) throw new Error(res.status === 404 ? 'Invoices table missing: run invoices.sql in Supabase' : 'Server refused (' + res.status + ')');
+  return (await res.json()).map(r => ({id: r.id, no: r.no, status: r.status, createdAt: invMs(r.created_at), updatedAt: invMs(r.updated_at), closedAt: invMs(r.closed_at), docs: r.docs || []}));
+}
+async function invPdfPages(blob) {
+  const lib = await getPdfjs(), pdf = await lib.getDocument({data: new Uint8Array(await blob.arrayBuffer())}).promise, out = [];
+  for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+    const page = await pdf.getPage(i), vp0 = page.getViewport({scale: 1}), vp = page.getViewport({scale: Math.min(2, 1700 / Math.max(vp0.width, vp0.height))});
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+    await page.render({canvas: c, canvasContext: cx, viewport: vp}).promise;
+    out.push({blob: await toJpeg(c, 0.72), w: c.width, h: c.height});
+  }
+  return out;
+}
+async function invUpload(recId, doc, blob) {
+  const path = 'inv/' + recId + '/' + doc.id + '.jpg';
+  const res = await api('/storage/v1/object/pods/' + path, {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'x-upsert': 'true'}, body: blob});
+  if (!res.ok) { let m = 'Upload failed (' + res.status + ')'; try { const j = await res.json(); if (j.message) m = j.message; } catch (e) {} throw new Error(m); }
+  return path;
+}
+async function invPut(rec) {
+  const prev = state.records.find(r => r.id === rec.id), out = [];
+  for (const d of rec.docs) {
+    if (d.path) { out.push(d); continue; }
+    if (d.type === 'pdf') {
+      const pages = await invPdfPages(d.blob);
+      for (const pg of pages) {
+        const nd = {id: uid(), kind: d.kind, name: (d.name || 'file') + '.jpg', type: 'image', added: d.added || Date.now(), w: pg.w, h: pg.h};
+        nd.blob = await shrinkForUpload(pg.blob); nd.src = nd.blob; nd.path = await invUpload(rec.id, nd, nd.blob); out.push(nd);
+      }
+    } else {
+      d.blob = await shrinkForUpload(d.blob); d.src = d.blob; d.path = await invUpload(rec.id, d, d.blob); out.push(d);
+    }
+  }
+  rec.docs = out;
+  const row = {id: rec.id, no: rec.no, status: rec.status, created_at: new Date(rec.createdAt).toISOString(), updated_at: new Date(rec.updatedAt).toISOString(), closed_at: rec.closedAt ? new Date(rec.closedAt).toISOString() : null, docs: out.map(invMeta)};
+  const res = await api('/rest/v1/invoices?on_conflict=id', {method: 'POST', headers: {'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(row)});
+  if (!res.ok) { let m = 'Server refused (' + res.status + ')'; try { const j = await res.json(); m = /duplicate|unique|409/i.test(JSON.stringify(j)) || res.status === 409 ? rec.no + ' already exists on the server' : (j.message || m); } catch (e) {} throw new Error(m); }
+  if (prev) {
+    const gone = (prev.docs || []).filter(d => d.path && !out.some(x => x.path === d.path)).map(d => d.path);
+    if (gone.length) api('/storage/v1/object/pods', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({prefixes: gone})}).catch(() => {});
+  }
+}
+async function invDel(id) {
+  const prev = state.records.find(r => r.id === id), paths = ((prev && prev.docs) || []).map(d => d.path).filter(Boolean);
+  const res = await api('/rest/v1/invoices?id=eq.' + encodeURIComponent(id), {method: 'DELETE'});
+  if (!res.ok) throw new Error('Server refused (' + res.status + ')');
+  if (paths.length) api('/storage/v1/object/pods', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({prefixes: paths})}).catch(() => {});
+}
+async function invHydrate(rec) {
+  if (!INV.on || !rec) return;
+  const need = rec.docs.filter(d => d.path && !d.blob);
+  if (!need.length) return;
+  busy('Loading photos…');
+  try {
+    let i = 0;
+    const worker = async () => { while (i < need.length) { const d = need[i++]; const res = await api('/storage/v1/object/authenticated/pods/' + d.path.split('/').map(encodeURIComponent).join('/')); if (!res.ok) throw new Error('Could not load a photo (' + res.status + ')'); const b = await res.blob(); d.blob = b; d.src = b; d.type = 'image'; const w = d.w || 1000, h = d.h || 1400; d.srcW = w; d.srcH = h; d.cropped = false; d.corners = [{x: 0, y: 0}, {x: w, y: 0}, {x: w, y: h}, {x: 0, y: h}]; } };
+    await Promise.all([worker(), worker(), worker()]);
+  } catch (e) { toast(netMsg(e), true); throw e; } finally { busy(false); }
+}
+async function invRefresh() {
+  if (!INV.on || !$('#editor').hidden) return;
+  try {
+    const fresh = await invList(), old = new Map(state.records.map(r => [r.id, r]));
+    fresh.forEach(r => { const o = old.get(r.id); if (o && o.updatedAt === r.updatedAt && o.docs.some(d => d.blob)) r.docs = o.docs; });
+    state.records = fresh; renderList();
+  } catch (e) {}
+}
+function invBanner() {
+  let b = $('#invLegacy');
+  if (!b) { b = document.createElement('div'); b.id = 'invLegacy'; b.className = 'banner'; const l = $('#list'); l.parentNode.insertBefore(b, l); }
+  const n = INV.legacy.length; b.hidden = !n || !INV.on;
+  if (n) b.innerHTML = '📱 <b>' + n + ' invoice' + (n > 1 ? 's' : '') + '</b> are only on this phone. <button class="btn sm primary" id="invMigrate" type="button">Upload to server</button>';
+}
+async function invMigrate() {
+  const list = INV.legacy.slice(); let done = 0, skip = [];
+  await withBusy('Uploading invoices…', async (setP, setMsg) => {
+    for (const rec of list) {
+      setMsg(rec.no + ' (' + (done + skip.length + 1) + '/' + list.length + ')…'); setP((done + skip.length) / list.length);
+      if (state.records.some(r => r.no === rec.no)) { skip.push(rec.no); continue; }
+      try { await persist(rec); await _dbDel(rec.id); INV.legacy = INV.legacy.filter(x => x.id !== rec.id); done++; }
+      catch (e) { skip.push(rec.no); }
+    }
+  });
+  renderList(); invBanner();
+  toast(done + ' uploaded' + (skip.length ? ' · skipped: ' + skip.join(', ') : ' ✓'), !!skip.length);
+}
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#invMigrate')) invMigrate(); });
+async function invStart() {
+  INV.legacy = state.records.slice();
+  try { INV.on = true; state.records = await invList(); }
+  catch (e) { INV.on = false; state.records = INV.legacy; toast(netMsg(e), true); }
+  state.selected.clear(); renderList(); invBanner();
+}
 /* =====================================================================
    Boot
    ===================================================================== */
