@@ -620,7 +620,7 @@ body.adm main{padding-bottom:160px}
   <div class="ordbar" id="ordBar" hidden><b id="ordSel">0 selected</b><span class="grow"></span><button class="btn" id="ordExport" type="button">⬇ Export</button><button class="btn" id="ordUnasg" type="button" hidden>Unassign</button><button class="btn danger" id="ordDel" type="button">Delete</button><button class="btn brass" id="ordAsg" type="button">Assign driver</button></div>
  </div>
 </main>
-<footer class="note">Invoice format: INV + 7 digits (e.g. INV1234567). My invoices stay on this phone. Driver PODs are kept safely on the server.</footer>
+<footer class="note">Invoice format: INV + 7 digits (e.g. INV1234567). Admin invoices are saved on the server (phone + computer). Driver PODs are kept safely on the server.</footer>
 
 <!-- Sign in -->
 <div class="overlay auth" id="auth" hidden>
@@ -3508,7 +3508,9 @@ async function invRefresh() {
 function invBanner() {
   let b = $('#invLegacy');
   if (!b) { b = document.createElement('div'); b.id = 'invLegacy'; b.className = 'banner'; const l = $('#list'); l.parentNode.insertBefore(b, l); }
-  const n = INV.legacy.length; b.hidden = !n || !INV.on;
+  const n = INV.legacy.length;
+  if (!INV.on && INV.err) { b.hidden = false; b.innerHTML = '⚠ Server invoices not available: <b>' + esc(INV.err) + '</b>. Showing only invoices saved on this phone.'; return; }
+  b.hidden = !n || !INV.on;
   if (n) b.innerHTML = '📱 <b>' + n + ' invoice' + (n > 1 ? 's' : '') + '</b> are only on this phone. <button class="btn sm primary" id="invMigrate" type="button">Upload to server</button>';
 }
 async function invMigrate() {
@@ -3528,7 +3530,7 @@ document.addEventListener('click', e => { if (e.target.closest && e.target.close
 async function invStart() {
   INV.legacy = state.records.slice();
   try { INV.on = true; state.records = await invList(); }
-  catch (e) { INV.on = false; state.records = INV.legacy; toast(netMsg(e), true); }
+  catch (e) { INV.on = false; state.records = INV.legacy; INV.err = netMsg(e); toast(INV.err, true); }
   state.selected.clear(); renderList(); invBanner();
 }
 /* =====================================================================
