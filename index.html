@@ -593,7 +593,7 @@ body.adm main{padding-bottom:160px}
  <div id="viewCharges" hidden>
   <div class="toolbar"><strong>Outside vehicle charges</strong><span class="grow"></span><button class="btn" id="btnChgRef" type="button">↻ Refresh</button></div>
   <section class="card" style="margin-bottom:12px"><div id="chgBodyA"></div></section>
-  <section class="card" id="chgBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><div style="display:flex;gap:6px"><button class="btn sm" id="chgPdf" type="button">📄 Statement</button><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
+  <section class="card" id="chgBox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Outside vehicle charges</h3><div style="display:flex;gap:6px"><button class="btn sm" id="chgPdf" type="button">📄 Statement</button><button class="btn sm" id="chgPdfSo" type="button">📄 With SO rows</button><button class="btn sm" id="chgCsv" type="button">Export CSV</button></div></div><div class="kmrange"><button class="btn sm" data-chgr="week" type="button">7 days</button><button class="btn sm" data-chgr="month" type="button">This month</button><button class="btn sm" data-chgr="last" type="button">Last month</button></div><div class="kmrange"><input type="date" id="chgFrom" aria-label="From"><input type="date" id="chgTo" aria-label="To"></div><div class="chgtot"></div><div class="chgrows"></div></section>
  </div>
 
  <div id="viewDrivers" hidden>
@@ -3146,7 +3146,8 @@ document.addEventListener('click', async e => {
     }
     else if (t.closest('[data-chgrow]')) { const [d, id] = t.closest('[data-chgrow]').dataset.chgrow.split('|'); Chg.date = d; Chg.open = id; await loadChg(); if (Chg.open) $('#viewCharges').scrollIntoView(); else toast('No orders for this vehicle on that day', true); }
     else if (t.id === 'chgCsv') chgCsv();
-    else if (t.id === 'chgPdf') await withBusy('Building statement…', chgStatement);
+    else if (t.id === 'chgPdf') await withBusy('Building statement…', () => chgStatement(false));
+    else if (t.id === 'chgPdfSo') await withBusy('Building statement with SO numbers…', () => chgStatement(true));
     else if (t.id === 'btnChgRef') { Chg.open = null; await loadChg(); await loadChgReport(); toast('Refreshed'); }
     else if (t.id === 'btnKmRef') { await loadKmReport(); toast('Refreshed'); }
     else if (t.id === 'btnOrdRef') { await loadOrders(); toast('Refreshed'); }
@@ -3191,9 +3192,15 @@ async function refreshDriver() {
 }
 
 /* ---- printable statement (PDF): summary per vehicle/driver + day-by-day details ---- */
-async function chgStatement() {
+async function chgStatement(withSo) {
   const rows = ChgA.rows.slice().sort((a, b) => String(a.name).localeCompare(String(b.name)) || String(a.day).localeCompare(String(b.day)));
   if (!rows.length) { toast('No charges in this period', true); return; }
+  const DAYO = new Map();
+  if (withSo) {      // one lookup per day: the orders (SO, customer, status, amount) of every vehicle that day
+    const days = [...new Set(rows.map(r => r.day))]; let i = 0;
+    const work = async () => { while (i < days.length) { const d = days[i++]; const list = await chgRpc('charges_day', {p_date: d}); (list || []).forEach(x => DAYO.set(d + '|' + x.driver_id, x.orders || [])); } };
+    await Promise.all([work(), work(), work(), work()]);
+  }
   const {PDFDocument, StandardFonts, rgb} = PDFLib, doc = await PDFDocument.create();
   const F = await doc.embedFont(StandardFonts.Helvetica), FB = await doc.embedFont(StandardFonts.HelveticaBold);
   const W = 595, H = 842, M = 40, navy = rgb(0.06, 0.15, 0.22), grey = rgb(0.4, 0.44, 0.5), line = rgb(0.85, 0.87, 0.9), red = rgb(0.7, 0.15, 0.12);
@@ -3205,6 +3212,23 @@ async function chgStatement() {
   const cols = [['Date', 0, false], ['Vehicle', 62, false], ['Deliv.', 235, true], ['Ret.', 275, true], ['Delivery', 335, true], ['Labour', 395, true], ['Return', 455, true], ['Total', 515, true]];
   const head = (c) => { page.drawRectangle({x: M, y: y - 4, width: W - 2 * M, height: 16, color: rgb(0.93, 0.95, 0.97)}); cols.forEach(([t, x, r]) => text(t, M + x, y, {bold: true, size: 8.5, right: r, color: grey})); y -= 18; };
   const money = n => fmtAmt(n);
+  const green = rgb(0.04, 0.48, 0.29), cut = (t, n) => { t = String(t == null ? '' : t); return t.length > n ? t.slice(0, n - 1) + '.' : t; };
+  const soBlock = (nm, mine) => {
+    const cont = () => { newPage(); text(nm + ' (continued)', M, y, {bold: true, size: 11}); y -= 16; };
+    mine.forEach(r => {
+      const os = (DAYO.get(r.day + '|' + r.driver_id) || []).filter(o => DELIVERED.includes(o.status) || o.status === 'returned');
+      if (y < 110) cont();
+      page.drawRectangle({x: M, y: y - 4, width: W - 2 * M, height: 16, color: rgb(0.93, 0.95, 0.97)});
+      let dl = r.day; try { dl = new Date(r.day + 'T00:00:00').toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'}); } catch (e) {}
+      text(dl + (r.vehicle ? '  ·  ' + r.vehicle : ''), M + 4, y, {bold: true, size: 9}); y -= 17;
+      os.forEach(o => { if (y < 60) cont();
+        const d = DELIVERED.includes(o.status);
+        text(o.so_no || '', M + 10, y, {size: 8.5}); text(cut(o.customer, 44), M + 88, y, {size: 8.5}); text(d ? 'Delivered' : 'Returned', M + 360, y, {size: 8.5, bold: true, color: d ? green : red}); text(d ? money(o.amount) : '-', M + 515, y, {size: 8.5, right: true});
+        page.drawLine({start: {x: M, y: y - 4}, end: {x: W - M, y: y - 4}, thickness: .3, color: line}); y -= 13; });
+      if (y < 60) cont();
+      text('Labour ' + money(r.labour) + '    Return charge ' + money(r.return_charge), M + 10, y, {size: 8.5, color: grey}); text('Day total', M + 450, y, {bold: true, size: 9, right: true}); text(money(chgRowTotal(r)), M + 515, y, {bold: true, size: 9, right: true}); y -= 20;
+    });
+  };
   newPage();
   text('Outside vehicle charges: Statement', M, y, {bold: true, size: 17}); y -= 20;
   text('Period: ' + from + ' to ' + to, M, y, {size: 10, color: grey}); text('Generated ' + new Date().toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}), W - M, y, {size: 9, color: grey, right: true}); y -= 26;
@@ -3223,15 +3247,15 @@ async function chgStatement() {
   by.forEach((o, nm) => {
     const mine = rows.filter(r => r.name === nm);
     if (y < 120) newPage();
-    text(nm, M, y, {bold: true, size: 12}); y -= 16; head();
+    text(nm, M, y, {bold: true, size: 12}); y -= 16; if (withSo) soBlock(nm, mine); else { head();
     mine.forEach(r => { if (y < 70) { newPage(); text(nm + ' (continued)', M, y, {bold: true, size: 11}); y -= 16; head(); }
       text(r.day, M, y); text(r.vehicle || '', M + 62, y); text(r.delivered, M + 235, y, {right: true}); text(r.returned, M + 275, y, {right: true}); text(money(r.delivery), M + 335, y, {right: true}); text(money(r.labour), M + 395, y, {right: true}); text(money(r.return_charge), M + 455, y, {right: true}); text(money(chgRowTotal(r)), M + 515, y, {right: true, bold: true});
-      page.drawLine({start: {x: M, y: y - 5}, end: {x: W - M, y: y - 5}, thickness: .4, color: line}); y -= 15; });
+      page.drawLine({start: {x: M, y: y - 5}, end: {x: W - M, y: y - 5}, thickness: .4, color: line}); y -= 15; }); }
     text('Total ' + nm, M, y - 2, {bold: true, color: red}); text(money(o.tot), M + 515, y - 2, {bold: true, right: true, color: red}); y -= 32;
   });
   const n = doc.getPageCount(); doc.getPages().forEach((pg, i) => { page = pg; text('Page ' + (i + 1) + ' of ' + n, W / 2 + 20, 22, {size: 8, color: grey, right: true}); });
   const bytes = await doc.save();
-  downloadBlob(new Blob([bytes], {type: 'application/pdf'}), 'Outside_charges_statement_' + from + '_to_' + to + '.pdf');
+  downloadBlob(new Blob([bytes], {type: 'application/pdf'}), 'Outside_charges_statement_' + from + '_to_' + to + (withSo ? '_with_SO' : '') + '.pdf');
 }
 /* =============== Today dashboard, missing PODs, storage / backup / cleanup =============== */
 const Dash = {d: null, st: null, days: 30, open: new Set(), det: {}};
