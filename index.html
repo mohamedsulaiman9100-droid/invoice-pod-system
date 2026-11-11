@@ -536,6 +536,7 @@ body.adm #moreSheet{min-width:190px}
 
 .rtiles{display:flex;gap:8px;margin-bottom:4px}.rtile{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px}.rtile b{font-size:22px;display:block}.rtile span{font-size:12px;color:var(--muted,#8da0b4)}.rup{color:#ff7a70;font-size:11px;margin-top:2px}.rdn{color:#4ade80;font-size:11px;margin-top:2px}.rsub{margin:4px 0 0 8px;padding-left:8px;border-left:2px solid var(--line);font-size:12px;color:var(--muted,#8da0b4)}.rli{cursor:pointer;align-items:center}.rchip{font-size:11px;padding:2px 8px;border-radius:999px;background:#3a1613;color:#ff7a70;white-space:nowrap}.rrow .bad{color:#ff7a70}
 .rtile .m{font-size:11px}.rtile>div{font-size:11px}
+.rcb{width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex:none;text-align:center;line-height:18px;font-weight:800;font-size:13px;cursor:pointer}.rcb.on{background:var(--brass,#e2b75b);border-color:var(--brass,#e2b75b);color:#1a1204}.rli{gap:10px;justify-content:flex-start}.rgrow{flex:1;cursor:pointer}.rselbar{position:sticky;bottom:70px;margin-top:10px;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 </style>
 </head>
 <body class="booting">
@@ -2700,7 +2701,7 @@ function renderOrders() {
 async function delOrders(ids) {
   const res = await api('/rest/v1/assignments?id=in.(' + ids.join(',') + ')', {method: 'DELETE'});
   if (!res.ok) throw new Error('Server refused (' + res.status + ')');
-  ids.forEach(i => Ord.sel.delete(i)); toast(ids.length + ' deleted'); await loadOrders();
+  ids.forEach(i => Ord.sel.delete(i)); toast(ids.length + ' deleted'); await loadOrders(); try { const vr = document.getElementById('viewReports'); if (vr && !vr.hidden && typeof loadReports === 'function') loadReports(); } catch (e) {}
 }
 async function openOrderDetail(id) {
   const r = Ord.rows.find(x => x.id === id); if (!r) return;
@@ -3657,7 +3658,7 @@ async function shareNow() {
 }
 
 /* ---------- Reports ---------- */
-const Rep = {tab: 'returns', ret: null, drv: null, open: new Set()};
+const Rep = {tab: 'returns', ret: null, drv: null, open: new Set(), sel: new Set()};
 const repHm = v => { if (!v) return '–'; const d = new Date(v), p = n => String(n).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()); };
 const repDur = m => m >= 60 ? Math.floor(m / 60) + 'h ' + String(Math.round(m % 60)).padStart(2, '0') + 'm' : Math.round(m) + ' min';
 function repInit() { if (!$('#repFrom').value) { const t = new Date(); $('#repFrom').value = dateKey(new Date(t.getTime() - 29 * 864e5)); $('#repTo').value = dateKey(t); } }
@@ -3669,7 +3670,7 @@ async function loadReports() {
   try {
     const days = Math.round((new Date(to) - new Date(from)) / 864e5) + 1, pTo = dateKey(new Date(new Date(from).getTime() - 864e5)), pFrom = dateKey(new Date(new Date(from).getTime() - days * 864e5));
     const [r, d, pr] = await Promise.all([chgRpc('report_returns', {p_from: from, p_to: to}), chgRpc('report_drivers', {p_from: from, p_to: to}), chgRpc('report_returns', {p_from: pFrom, p_to: pTo}).catch(() => null)]);
-    Rep.ret = r; Rep.drv = d || []; Rep.prev = pr; renderReports();
+    Rep.ret = r; Rep.drv = d || []; Rep.prev = pr; Rep.sel.clear(); renderReports();
   }
   catch (e) { $('#repBody').innerHTML = '<div class="empty">' + esc(repErr(e)) + '</div>'; }
 }
@@ -3698,7 +3699,8 @@ function renderReports() {
       ${drv.length ? `<h4 class="rh">By driver</h4>${drv.map(([k, c, o]) => `<div class="rrow"><span>${esc(k)} <span class="m">${c}${o ? ' of ' + o : ''}</span></span><b class="${o && c / o >= .15 ? 'bad' : ''}">${o ? Math.round(c / o * 100) + '%' : c}</b></div>`).join('')}` : ''}
       <h4 class="rh">By customer</h4>${custs.slice(0, 8).map(([k, c]) => `<div class="rrow"><span>${esc(k)}</span><b>${c}</b></div>`).join('')}
       ${rep3.length ? `<h4 class="rh">Repeat returns <span class="m">(3 or more)</span></h4>${rep3.map(([k, c]) => `<div class="rrow"><span>${esc(k)}</span><b class="bad">${c}</b></div>`).join('')}` : ''}
-      <h4 class="rh">Return list <span class="m">(tap to open)</span></h4>${list.slice(0, 60).map((r, i) => `<div class="rrow rli" data-repso="${i}"><div><b>${esc(r.so_no)}</b> <span class="m">${esc(r.customer || '')}</span><div class="m">${esc(r.driver_name || '–')} · ${esc(String(r.day).slice(5).split('-').reverse().join('/'))} · ${esc(((r.note || '').replace(' - ', ': ')) || 'No reason noted')}</div></div>${attM[r.so_no] > 1 ? `<span class="rchip">${attM[r.so_no]} attempts</span>` : ''}</div>`).join('')}${list.length > 60 ? `<div class="m">Showing 60 of ${list.length}. Export CSV for all.</div>` : ''}
+      <h4 class="rh">Return list <span class="m">(tap to open)</span></h4>${list.slice(0, 60).map((r, i) => `<div class="rrow rli"><span class="rcb${Rep.sel.has(i) ? ' on' : ''}" data-repsel="${i}">${Rep.sel.has(i) ? '✓' : ''}</span><div class="rgrow" data-repso="${i}"><b>${esc(r.so_no)}</b> <span class="m">${esc(r.customer || '')}</span><div class="m">${esc(r.driver_name || '–')} · ${esc(String(r.day).slice(5).split('-').reverse().join('/'))} · ${esc(((r.note || '').replace(' - ', ': ')) || 'No reason noted')}</div></div>${attM[r.so_no] > 1 ? `<span class="rchip">${attM[r.so_no]} attempts</span>` : ''}</div>`).join('')}${list.length > 60 ? `<div class="m">Showing 60 of ${list.length}. Export CSV for all.</div>` : ''}
+      <div class="rselbar" id="repBar"${Rep.sel.size ? '' : ' hidden'}><b>${Rep.sel.size} selected</b><span><button class="btn sm" type="button" id="repSelNo">Cancel</button> <button class="btn sm danger" type="button" id="repDel">🗑 Delete</button></span></div>
       <div class="repq" style="margin-top:12px"><button class="btn sm primary" type="button" id="repCsv">⬇ Export CSV</button><button class="btn sm" type="button" id="repShare">↗ Share</button></div>`;
   } else {
     const d = Rep.drv || [];
@@ -3726,6 +3728,18 @@ async function repOpenSo(i) {
     if (!Ord.rows.find(x => x.id === a.id)) Ord.rows.push(a);
     openOrderDetail(a.id);
   } catch (e) { toast('Could not open the order', true); }
+}
+
+async function repDelete() {
+  const sel = [...Rep.sel].map(i => (Rep.list || [])[i]).filter(Boolean); if (!sel.length) return;
+  const res = await api('/rest/v1/assignments?select=id,so_no,work_date,status&so_no=in.(' + [...new Set(sel.map(r => r.so_no))].join(',') + ')'); if (!res.ok) throw new Error('Server refused (' + res.status + ')');
+  const all = await res.json(), ids = [], rest = [];
+  sel.forEach(r => { const a = all.find(x => x.so_no === r.so_no && String(x.work_date) === String(r.day) && x.status === 'returned'); a ? ids.push(a.id) : rest.push(r); });
+  if (ids.length) { const d = await api('/rest/v1/assignments?id=in.(' + ids.join(',') + ')', {method: 'DELETE'}); if (!d.ok) throw new Error('Server refused (' + d.status + ')'); }
+  let old = 0, fail = 0;
+  for (const r of rest) { try { await chgRpc('admin_delete_attempts', {p_so: r.so_no, p_day: r.day}); old++; } catch (e) { fail++; } }
+  toast((ids.length + old) + ' deleted' + (fail ? ', ' + fail + ' old records need delret.sql' : ''), !!fail);
+  Rep.sel.clear(); loadReports();
 }
 
 /* ---------- Activity log ---------- */
@@ -3782,6 +3796,9 @@ document.addEventListener('click', async e => {
   if ((b = c('[data-reptab]'))) { Rep.tab = b.dataset.reptab; loadReports(); return; }
   if ((b = c('[data-repq]'))) { const now = new Date(), q = b.dataset.repq; $('#repTo').value = dateKey(now); $('#repFrom').value = q === 'm' ? dateKey(new Date(now.getFullYear(), now.getMonth(), 1)) : dateKey(new Date(now.getTime() - (Number(q) - 1) * 864e5)); loadReports(); return; }
   if ((b = c('[data-repdrv]'))) { const id = b.dataset.repdrv; Rep.open.has(id) ? Rep.open.delete(id) : Rep.open.add(id); renderReports(); return; }
+  if ((b = c('[data-repsel]'))) { const i = Number(b.dataset.repsel); Rep.sel.has(i) ? Rep.sel.delete(i) : Rep.sel.add(i); renderReports(); return; }
+  if (t.id === 'repSelNo') { Rep.sel.clear(); renderReports(); return; }
+  if (t.id === 'repDel') { const n = Rep.sel.size; mdl('Delete ' + n + ' return' + (n > 1 ? 's' : '') + '?', '<div class="m">These orders will be deleted for good and the report numbers will go down. The Activity log keeps a record.</div>', 'Yes, delete', () => withBusy('Deleting…', repDelete)); return; }
   if ((b = c('[data-repso]'))) { repOpenSo(Number(b.dataset.repso)); return; }
   if (t.id === 'repCsv') { downloadBlob(repCsvBlob(), 'Returns_' + $('#repFrom').value + '_' + $('#repTo').value + '.csv'); return; }
   if (t.id === 'repShare') { shareSheet(repCsvBlob(), 'Returns_' + $('#repFrom').value + '_' + $('#repTo').value + '.csv'); return; }
