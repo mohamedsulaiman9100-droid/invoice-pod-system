@@ -537,6 +537,8 @@ body.adm #moreSheet{min-width:190px}
 .rtiles{display:flex;gap:8px;margin-bottom:4px}.rtile{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px}.rtile b{font-size:22px;display:block}.rtile span{font-size:12px;color:var(--muted,#8da0b4)}.rup{color:#ff7a70;font-size:11px;margin-top:2px}.rdn{color:#4ade80;font-size:11px;margin-top:2px}.rsub{margin:4px 0 0 8px;padding-left:8px;border-left:2px solid var(--line);font-size:12px;color:var(--muted,#8da0b4)}.rli{cursor:pointer;align-items:center}.rchip{font-size:11px;padding:2px 8px;border-radius:999px;background:#3a1613;color:#ff7a70;white-space:nowrap}.rrow .bad{color:#ff7a70}
 .rtile .m{font-size:11px}.rtile>div{font-size:11px}
 .rcb{width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex:none;text-align:center;line-height:18px;font-weight:800;font-size:13px;cursor:pointer}.rcb.on{background:var(--brass,#e2b75b);border-color:var(--brass,#e2b75b);color:#1a1204}.rli{gap:10px;justify-content:flex-start}.rgrow{flex:1;cursor:pointer}.rselbar{position:sticky;bottom:70px;margin-top:10px;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.k.cn{background:var(--surface-2);color:var(--muted)}label.opt{display:block;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px;cursor:pointer}label.opt input{margin-right:8px}
+label.opt{display:flex!important;align-items:center;gap:10px}label.opt input{width:20px!important;height:20px;margin:0!important;flex:none;min-height:0}
 </style>
 </head>
 <body class="booting">
@@ -2473,13 +2475,14 @@ function parseAssignGrid(grid) {
 
 /* ---- shared labels ---- */
 const ST = {unassigned: {t: 'Unassigned', k: 'un'}, assigned: {t: 'Assigned', k: 'as'}, out: {t: 'Out for delivery', k: 'out'}, pod_pending: {t: 'Delivered · POD pending', k: 'pp'},
-  complete: {t: 'Complete', k: 'dl'}, handed_over: {t: 'Handed over', k: 'hm'}, returned: {t: 'Returned', k: 'rt'}};
+  complete: {t: 'Complete', k: 'dl'}, handed_over: {t: 'Handed over', k: 'hm'}, returned: {t: 'Returned', k: 'rt'}, cancelled: {t: 'Cancelled', k: 'cn'}};
 const stOf = r => isMerch(r) && session && session.role === 'admin' ? {t: 'With ' + r.driver_name, k: 'out'} : r.status === 'unassigned' && r.flag === 'not_picked' ? {t: 'Not picked', k: 'np'} : (r.status === 'returned' && r.hub_received_at ? {t: 'Returned · at hub', k: 'rt'} : ST[r.status] || ST.assigned);
 const kchip = r => { const s = stOf(r); return (r.attempt > 1 ? `<span class="k att">${r.attempt}${r.attempt === 2 ? 'nd' : r.attempt === 3 ? 'rd' : 'th'} attempt</span> ` : '') + `<span class="k ${s.k}">${s.t}</span>`; };
 const isMerch = r => r.status === 'out' && r.handed_by_id && r.driver_id !== r.handed_by_id && !r.return_from;
 const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? 'returned' : r.status === 'complete' ? 'delivered' : r.status;
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
+  cancelled: i => 'Order cancelled' + (i ? ': ' + i : ''), reopened: () => 'Reopened (back to Returned)',
   returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone',
   temp: i => 'Temperature: ' + (i || ''), moved: () => 'Moved to today', reassigned: i => 'Sent out again: ' + (i || ''), to_merchandiser: i => 'Handed to merchandiser ' + (i || ''), return_to_driver: i => 'Return handed to driver ' + (i || ''), not_mine: i => 'Not with ' + (i || 'them') + ': sent back'};
 const evTime = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'), hm = p(d.getHours()) + ':' + p(d.getMinutes()); return dateKey(d) === dateKey() ? hm : d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + hm; };
@@ -2554,7 +2557,7 @@ function tripVisible() { const today = dateKey(); return Trip.rows.filter(r => r
 function tripCard(r) { const h = tripCard0(r); return r._q ? h.replace('class="cc"', 'class="cc q"') : h; }
 function tripCard0(r) {
   if (isAway(r)) return `<div class="cc" style="--rail:var(--blue)"><span class="k hm">Handed to ${esc(r.driver_name || '')}</span><div class="t">${esc(r.customer || r.so_no)}</div><div class="m">${esc(r.so_no)}</div><div class="m">Now with <b class="nmc">${esc(r.driver_name || '')}</b> · ${esc(stOf(r).t)}</div></div>`;
-  const rail = {assigned: 'var(--brass)', out: 'var(--blue)', pod_pending: 'var(--brass)', complete: 'var(--closed)', handed_over: 'var(--blue)', returned: 'var(--danger)'}[r.status];
+  const rail = {assigned: 'var(--brass)', out: 'var(--blue)', pod_pending: 'var(--brass)', complete: 'var(--closed)', handed_over: 'var(--blue)', returned: 'var(--danger)', cancelled: 'var(--muted)'}[r.status];
   let chipx = '';
   const chip0 = r.status === 'assigned' ? '<span class="k as">To pick</span>' : kchip(r);
   let acts = '', extra = '';
@@ -2658,7 +2661,7 @@ document.addEventListener('click', async e => {
 /* =============== admin: Orders tab =============== */
 const Ord = {rows: [], drivers: [], f: 'unassigned', q: '', drv: '', sel: new Set(), parsed: null, pick: null};
 const ageTxt = t => { const d = Math.floor((Date.now() - new Date(t)) / 864e5); return isNaN(d) ? '' : d <= 0 ? 'today' : d + ' day' + (d > 1 ? 's' : ''); };
-const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['merch', 'With merchandiser', '#a779d9'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned', '#e26b61'], ['delivered', 'Delivered', '#35c28e'], ['handed_over', 'Handed over', '#6f93ee']];
+const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['merch', 'With merchandiser', '#a779d9'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned', '#e26b61'], ['delivered', 'Delivered', '#35c28e'], ['handed_over', 'Handed over', '#6f93ee'], ['cancelled', 'Cancelled', '#8b95a3']];
 async function loadOrderDrivers() {
   try { const res = await api('/rest/v1/profiles?select=id,display_name&role=eq.driver&order=display_name'); if (res.ok) Ord.drivers = await res.json(); } catch (e) {}
   $('#ordDrv').innerHTML = '<option value="">All drivers</option>' + Ord.drivers.map(d => `<option>${esc(d.display_name)}</option>`).join('');
@@ -2706,8 +2709,8 @@ async function delOrders(ids) {
 async function openOrderDetail(id) {
   const r = Ord.rows.find(x => x.id === id); if (!r) return;
   $('#ordSheet').hidden = false;
-  const facts = [r.driver_name && ((r.handed_by && !r.return_from ? 'With merchandiser: <b>' : r.return_from ? 'Return carried by: <b>' : 'Driver: <b>') + esc(r.driver_name) + '</b>'), r.handed_by && 'Handed over by: <b>' + esc(r.handed_by) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>', r.temp_c != null && 'Temperature: <b>' + esc(String(r.temp_c)) + ' °C</b>'].filter(Boolean).join(' · ');
-  const act = (r.status === 'returned' && !r.hub_received_at ? `<button class="btn primary main" data-hubrec="${r.id}" type="button">Received at hub</button>` : '') + `<button class="btn danger main" data-odel="${r.id}" type="button">Delete this order</button>`;
+  const facts = [r.driver_name && ((r.handed_by && !r.return_from ? 'With merchandiser: <b>' : r.return_from ? 'Return carried by: <b>' : 'Driver: <b>') + esc(r.driver_name) + '</b>'), r.handed_by && 'Handed over by: <b>' + esc(r.handed_by) + '</b>', r.handed_to && 'Handed to: <b>' + esc(r.handed_to) + '</b>', r.status === 'returned' && r.note && 'Reason: <b>' + esc(r.note) + '</b>', r.status === 'cancelled' && 'Cancelled' + (r.cancel_reason ? ': <b>' + esc(r.cancel_reason) + '</b>' : ''), r.temp_c != null && 'Temperature: <b>' + esc(String(r.temp_c)) + ' °C</b>'].filter(Boolean).join(' · ');
+  const act = (r.status === 'returned' && !r.hub_received_at ? `<button class="btn primary main" data-hubrec="${r.id}" type="button">Received at hub</button>` : '') + (r.status === 'returned' && r.hub_received_at ? `<button class="btn danger main" data-ocancel="${r.id}" type="button">Cancel order</button>` : '') + (r.status === 'cancelled' ? `<button class="btn primary main" data-oreopen="${r.id}" type="button">↺ Reopen</button>` : '') + `<button class="btn danger main" data-odel="${r.id}" type="button">Delete this order</button>`;
   $('#ordDetail').innerHTML = `<div class="dtitle"><div><div class="m">${esc(r.so_no)}</div><h3>${esc(r.customer || r.so_no)}</h3></div>${kchip(r)}</div>${facts ? `<div class="m" style="margin:8px 0">${facts}</div>` : ''}${act}<h4 style="margin:16px 0 10px">History</h4><div class="steps" id="ordHist"><div class="m">Loading…</div></div>`;
   try {
     const res = await api('/rest/v1/order_events?select=at,actor,kind,info&assignment_id=eq.' + id + '&order=at.asc'); if (!res.ok) throw 0;
@@ -2733,6 +2736,7 @@ async function tripExist(day) {
   const set = new Set(); const ret = new Map(); let okq = false;
   try {
     const r = await api('/rest/v1/assignments?select=so_no,work_date,status&work_date=eq.' + day + '&limit=3000'); if (r.ok) { (await r.json()).filter(x => x.work_date === day && x.status !== 'returned').forEach(x => set.add(x.so_no)); okq = true; }
+    const cq = await api('/rest/v1/assignments?select=so_no,status&status=eq.cancelled&limit=3000'); if (cq.ok) (await cq.json()).filter(x => x.status === 'cancelled').forEach(x => set.add(x.so_no));
     const q = await api('/rest/v1/assignments?select=so_no,status,hub_received_at&status=eq.returned&limit=3000'); if (q.ok) (await q.json()).filter(x => x.status === 'returned').forEach(x => ret.set(x.so_no, !!x.hub_received_at));
   } catch (e) {}
   Ord.exist = set; Ord.ret = ret; Ord.existDay = okq ? day : null;
@@ -3321,7 +3325,7 @@ const fmtSize = b => { b = Number(b || 0); return b >= 1e9 ? (b / 1e9).toFixed(2
 const agoTxt = ms => { const d = Math.floor(ms / 864e5); return d <= 0 ? 'today' : d === 1 ? '1 day ago' : d + ' days ago'; };
 async function loadDash() {
   if (!session || session.role !== 'admin' || session.demo) return;
-  try { Dash.d = await chgRpc('dash_today', {}); } catch (e) { toast(netMsg(e), true); }
+  try { Dash.d = dashFix(await chgRpc('dash_today', {})); } catch (e) { toast(netMsg(e), true); }
   await dashMerch(); await dashPend();
   try { Dash.bk = await chgRpc('backup_info', {}); } catch (e) {}
   try { Dash.st = await chgRpc('storage_usage', {p_days: Dash.days}); } catch (e) {}
@@ -3447,7 +3451,7 @@ async function autoTick(force) {
   if (Auto.busy || (!force && (!Auto.on || !autoSafe()))) return;
   Auto.busy = true;
   try {
-    if (view === 'today') { Dash.d = await chgRpc('dash_today', {}); await dashMerch(); try { Dash.bk = await chgRpc('backup_info', {}); } catch (e) {} renderDash(); nReopen(); }
+    if (view === 'today') { Dash.d = dashFix(await chgRpc('dash_today', {})); await dashMerch(); try { Dash.bk = await chgRpc('backup_info', {}); } catch (e) {} renderDash(); nReopen(); }
     Auto.last = new Date();
   } catch (e) {} finally { Auto.busy = false; autoUI(); }
 }
@@ -3657,6 +3661,20 @@ async function shareNow() {
   downloadBlob(ShareQ.blob, ShareQ.name); mdlClose(); toast('Sharing is not available here, file downloaded');
 }
 
+/* ---------- Cancel / reopen a returned order ---------- */
+const dashFix = d => { try { const n = d && d.counts && Number(d.counts.cancelled || 0); if (n) d.total = Math.max(0, Number(d.total || 0) - n); } catch (e) {} return d; };
+const CANCEL_REASONS = ['Customer cancelled', 'Duplicate order', 'Wrong order', 'Out of stock', 'Other'];
+function cancelOpen(id) {
+  const r = Ord.rows.find(x => x.id === id); if (!r) return;
+  mdl('Cancel ' + r.so_no + '?', '<div class="m" style="margin-bottom:8px">The order stays in the history. It will not count as a return.</div>' + CANCEL_REASONS.map((t, i) => `<label class="opt"><input type="radio" name="cnR" value="${esc(t)}"${i === 0 ? ' checked' : ''}> ${esc(t)}</label>`).join(''), 'Yes, cancel', () => withBusy('Cancelling…', async () => {
+    const v = (document.querySelector('input[name="cnR"]:checked') || {}).value || '';
+    await chgRpc('admin_cancel', {p_id: id, p_reason: v}); $('#ordSheet').hidden = true; toast('Order cancelled'); await loadOrders();
+  }));
+}
+async function reopenOrder(id) {
+  await withBusy('Reopening…', async () => { await chgRpc('admin_reopen', {p_id: id}); $('#ordSheet').hidden = true; toast('Order reopened'); await loadOrders(); });
+}
+
 /* ---------- Reports ---------- */
 const Rep = {tab: 'returns', ret: null, drv: null, open: new Set(), sel: new Set()};
 const repHm = v => { if (!v) return '–'; const d = new Date(v), p = n => String(n).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()); };
@@ -3700,6 +3718,7 @@ function renderReports() {
       <h4 class="rh">By customer</h4>${custs.slice(0, 8).map(([k, c]) => `<div class="rrow"><span>${esc(k)}</span><b>${c}</b></div>`).join('')}
       ${rep3.length ? `<h4 class="rh">Repeat returns <span class="m">(3 or more)</span></h4>${rep3.map(([k, c]) => `<div class="rrow"><span>${esc(k)}</span><b class="bad">${c}</b></div>`).join('')}` : ''}
       <h4 class="rh">Return list <span class="m">(tap to open)</span></h4>${list.slice(0, 60).map((r, i) => `<div class="rrow rli"><span class="rcb${Rep.sel.has(i) ? ' on' : ''}" data-repsel="${i}">${Rep.sel.has(i) ? '✓' : ''}</span><div class="rgrow" data-repso="${i}"><b>${esc(r.so_no)}</b> <span class="m">${esc(r.customer || '')}</span><div class="m">${esc(r.driver_name || '–')} · ${esc(String(r.day).slice(5).split('-').reverse().join('/'))} · ${esc(((r.note || '').replace(' - ', ': ')) || 'No reason noted')}</div></div>${attM[r.so_no] > 1 ? `<span class="rchip">${attM[r.so_no]} attempts</span>` : ''}</div>`).join('')}${list.length > 60 ? `<div class="m">Showing 60 of ${list.length}. Export CSV for all.</div>` : ''}
+      ${(Rep.ret.cancelled || []).length ? `<h4 class="rh">Cancelled <span class="m">(not counted as returns)</span></h4>${Rep.ret.cancelled.map(r => `<div class="rrow"><div><b>${esc(r.so_no)}</b> <span class="m">${esc(r.customer || '')}</span><div class="m">${esc(r.reason || 'No reason')}</div></div></div>`).join('')}` : ''}
       <div class="rselbar" id="repBar"${Rep.sel.size ? '' : ' hidden'}><b>${Rep.sel.size} selected</b><span><button class="btn sm" type="button" id="repSelNo">Cancel</button> <button class="btn sm danger" type="button" id="repDel">🗑 Delete</button></span></div>
       <div class="repq" style="margin-top:12px"><button class="btn sm primary" type="button" id="repCsv">⬇ Export CSV</button><button class="btn sm" type="button" id="repShare">↗ Share</button></div>`;
   } else {
@@ -3796,6 +3815,8 @@ document.addEventListener('click', async e => {
   if ((b = c('[data-reptab]'))) { Rep.tab = b.dataset.reptab; loadReports(); return; }
   if ((b = c('[data-repq]'))) { const now = new Date(), q = b.dataset.repq; $('#repTo').value = dateKey(now); $('#repFrom').value = q === 'm' ? dateKey(new Date(now.getFullYear(), now.getMonth(), 1)) : dateKey(new Date(now.getTime() - (Number(q) - 1) * 864e5)); loadReports(); return; }
   if ((b = c('[data-repdrv]'))) { const id = b.dataset.repdrv; Rep.open.has(id) ? Rep.open.delete(id) : Rep.open.add(id); renderReports(); return; }
+  if ((b = c('[data-ocancel]'))) { cancelOpen(b.dataset.ocancel); return; }
+  if ((b = c('[data-oreopen]'))) { try { await reopenOrder(b.dataset.oreopen); } catch (x) { toast(netMsg(x), true); } return; }
   if ((b = c('[data-repsel]'))) { const i = Number(b.dataset.repsel); Rep.sel.has(i) ? Rep.sel.delete(i) : Rep.sel.add(i); renderReports(); return; }
   if (t.id === 'repSelNo') { Rep.sel.clear(); renderReports(); return; }
   if (t.id === 'repDel') { const n = Rep.sel.size; mdl('Delete ' + n + ' return' + (n > 1 ? 's' : '') + '?', '<div class="m">These orders will be deleted for good and the report numbers will go down. The Activity log keeps a record.</div>', 'Yes, delete', () => withBusy('Deleting…', repDelete)); return; }
