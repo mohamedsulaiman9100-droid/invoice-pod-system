@@ -2477,7 +2477,7 @@ const ST = {unassigned: {t: 'Unassigned', k: 'un'}, assigned: {t: 'Assigned', k:
 const stOf = r => isMerch(r) && session && session.role === 'admin' ? {t: 'With ' + r.driver_name, k: 'out'} : r.status === 'unassigned' && r.flag === 'not_picked' ? {t: 'Not picked', k: 'np'} : (r.status === 'returned' && r.hub_received_at ? {t: 'Returned · at hub', k: 'rt'} : ST[r.status] || ST.assigned);
 const kchip = r => { const s = stOf(r); return (r.attempt > 1 ? `<span class="k att">${r.attempt}${r.attempt === 2 ? 'nd' : r.attempt === 3 ? 'rd' : 'th'} attempt</span> ` : '') + `<span class="k ${s.k}">${s.t}</span>`; };
 const isMerch = r => r.status === 'out' && r.handed_by_id && r.driver_id !== r.handed_by_id && !r.return_from;
-const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? 'returned' : (r.status === 'complete' || r.status === 'handed_over') ? 'closed' : r.status;
+const bucketOf = r => isMerch(r) ? 'merch' : r.status === 'returned' ? 'returned' : r.status === 'complete' ? 'delivered' : r.status;
 const EV = {uploaded: () => 'Uploaded', assigned: i => 'Assigned to ' + (i || ''), unassigned: () => 'Unassigned', picked: () => 'Picked', out: () => 'Out for delivery',
   not_picked: i => 'Not picked' + (i ? ': ' + i : ''), delivered: () => 'Delivered, POD not uploaded yet', handed_over: i => 'Handed to ' + (i || 'merchandiser'),
   returned: i => 'Returned to hub' + (i ? ': ' + i : ''), hub_received: () => 'Received at hub', pod_uploaded: () => 'POD uploaded', pod_removed: () => 'POD removed. Back to POD pending', undo: () => 'Undone',
@@ -2658,7 +2658,7 @@ document.addEventListener('click', async e => {
 /* =============== admin: Orders tab =============== */
 const Ord = {rows: [], drivers: [], f: 'unassigned', q: '', drv: '', sel: new Set(), parsed: null, pick: null};
 const ageTxt = t => { const d = Math.floor((Date.now() - new Date(t)) / 864e5); return isNaN(d) ? '' : d <= 0 ? 'today' : d + ' day' + (d > 1 ? 's' : ''); };
-const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['merch', 'With merchandiser', '#a779d9'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned', '#e26b61'], ['closed', 'Closed', '#35c28e']];
+const PIPE = [['unassigned', 'Unassigned', '#9aa5b4'], ['assigned', 'Assigned', '#e2b75b'], ['out', 'Out for delivery', '#6f93ee'], ['merch', 'With merchandiser', '#a779d9'], ['pod_pending', 'POD pending', '#f0c15a'], ['returned', 'Returned', '#e26b61'], ['delivered', 'Delivered', '#35c28e'], ['handed_over', 'Handed over', '#6f93ee']];
 async function loadOrderDrivers() {
   try { const res = await api('/rest/v1/profiles?select=id,display_name&role=eq.driver&order=display_name'); if (res.ok) Ord.drivers = await res.json(); } catch (e) {}
   $('#ordDrv').innerHTML = '<option value="">All drivers</option>' + Ord.drivers.map(d => `<option>${esc(d.display_name)}</option>`).join('');
